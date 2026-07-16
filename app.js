@@ -7,20 +7,34 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 // ---------- Sound v2 (Web Audio: Hall, geschichtete Impacts, FM-Glocken) ----------
 const Snd = (() => {
-  let ctx = null, master = null, verbGain = null, noiseBuf = null, muted = false;
+  let ctx = null, master = null, verbGain = null, noiseBuf = null, muted = false, buffers = {};
+  const NAMES = ["click", "tick", "place", "reveal", "clash", "score", "win", "lose"];
   function init() {
     if (ctx) return;
     try {
       ctx = new (window.AudioContext || window.webkitAudioContext)();
       master = ctx.createGain(); master.gain.value = 0.9;
-      const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -18; comp.ratio.value = 4;
+      const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -16; comp.ratio.value = 3;
       master.connect(comp); comp.connect(ctx.destination);
       const verb = ctx.createConvolver(); verb.buffer = impulse(2.0, 3.2);
       verbGain = ctx.createGain(); verbGain.gain.value = 0.32; verb.connect(verbGain); verbGain.connect(master);
       Snd._verb = verb;
       const n = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate), d = n.getChannelData(0);
       for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; noiseBuf = n;
+      loadSamples();
     } catch (e) { ctx = null; }
+  }
+  function loadSamples() {
+    for (const nm of NAMES) {
+      fetch(`assets/sfx/${nm}.wav`).then(r => r.ok ? r.arrayBuffer() : Promise.reject())
+        .then(b => ctx.decodeAudioData(b)).then(buf => { buffers[nm] = buf; }).catch(() => {});
+    }
+  }
+  function play(nm, g = 0.9) {
+    if (muted || !ctx || !buffers[nm]) return false;
+    const s = ctx.createBufferSource(); s.buffer = buffers[nm];
+    const a = ctx.createGain(); a.gain.value = g; s.connect(a); a.connect(master);
+    s.start(); return true;
   }
   function impulse(dur, decay) {
     const rate = ctx.sampleRate, len = rate * dur, b = ctx.createBuffer(2, len, rate);
@@ -57,15 +71,15 @@ const Snd = (() => {
     resume() { init(); try { ctx.resume(); } catch (e) {} },
     toggle() { muted = !muted; if (master) master.gain.setTargetAtTime(muted ? 0 : 0.9, ctx.currentTime, 0.02); return muted; },
     get muted() { return muted; },
-    click() { if (!ok()) return; voice("triangle", 540, 0.09, 0.10, { to: 400, wet: 0.25 }); },
+    click() { if (!ok()) return; if (play("click", 0.6)) return; voice("triangle", 540, 0.09, 0.10, { to: 400, wet: 0.25 }); },
     hover() { if (!ok()) return; voice("sine", 760, 0.05, 0.04, { to: 940, wet: 0.2 }); },
-    place() { if (!ok()) return; voice("sine", 190, 0.2, 0.28, { to: 62 }); noise(0.11, 0.2, { lp: 1700 }); voice("triangle", 520, 0.09, 0.08, { to: 300, wet: 0.3 }); },
-    tick() { if (!ok()) return; voice("square", 900, 0.05, 0.07, { to: 850, wet: 0.2 }); },
-    reveal() { if (!ok()) return; noise(0.34, 0.14, { hp: 500, lp: 5200 }); voice("sawtooth", 200, 0.4, 0.10, { to: 1000, wet: 0.5 }); },
-    clash() { if (!ok()) return; voice("sine", 150, 0.55, 0.55, { to: 34, wet: 0.7 }); noise(0.2, 0.4, { lp: 2600 }); voice("square", 320, 0.22, 0.16, { to: 110 }); voice("sawtooth", 1000, 0.28, 0.09, { to: 420, wet: 0.6 }); },
-    score() { if (!ok()) return;[784, 988, 1319, 1568].forEach((f, i) => bell(f, 0.6, 0.14, i * 0.085)); },
-    win() { if (!ok()) return; const ch = [[523, 659, 784], [587, 740, 880], [659, 831, 988], [784, 988, 1175]]; ch.forEach((c, i) => setTimeout(() => { if (ok()) c.forEach(f => voice("sawtooth", f, 0.55, 0.075, { wet: 0.6 })); }, i * 160)); [1047, 1319, 1568, 2093].forEach((f, i) => bell(f, 0.7, 0.12, 0.72 + i * 0.12)); },
-    lose() { if (!ok()) return;[392, 311, 262, 196].forEach((f, i) => voice("sawtooth", f, 0.4, 0.13, { to: f * 0.6, wet: 0.5 })); },
+    place() { if (!ok()) return; if (play("place", 0.95)) return; voice("sine", 190, 0.2, 0.28, { to: 62 }); noise(0.11, 0.2, { lp: 1700 }); voice("triangle", 520, 0.09, 0.08, { to: 300, wet: 0.3 }); },
+    tick() { if (!ok()) return; if (play("tick", 0.6)) return; voice("square", 900, 0.05, 0.07, { to: 850, wet: 0.2 }); },
+    reveal() { if (!ok()) return; if (play("reveal", 0.85)) return; noise(0.34, 0.14, { hp: 500, lp: 5200 }); voice("sawtooth", 200, 0.4, 0.10, { to: 1000, wet: 0.5 }); },
+    clash() { if (!ok()) return; if (play("clash", 1.0)) return; voice("sine", 150, 0.55, 0.55, { to: 34, wet: 0.7 }); noise(0.2, 0.4, { lp: 2600 }); voice("square", 320, 0.22, 0.16, { to: 110 }); voice("sawtooth", 1000, 0.28, 0.09, { to: 420, wet: 0.6 }); },
+    score() { if (!ok()) return; if (play("score", 0.9)) return;[784, 988, 1319, 1568].forEach((f, i) => bell(f, 0.6, 0.14, i * 0.085)); },
+    win() { if (!ok()) return; if (play("win", 0.95)) return; const ch = [[523, 659, 784], [587, 740, 880], [659, 831, 988], [784, 988, 1175]]; ch.forEach((c, i) => setTimeout(() => { if (ok()) c.forEach(f => voice("sawtooth", f, 0.55, 0.075, { wet: 0.6 })); }, i * 160)); [1047, 1319, 1568, 2093].forEach((f, i) => bell(f, 0.7, 0.12, 0.72 + i * 0.12)); },
+    lose() { if (!ok()) return; if (play("lose", 0.9)) return;[392, 311, 262, 196].forEach((f, i) => voice("sawtooth", f, 0.4, 0.13, { to: f * 0.6, wet: 0.5 })); },
   };
 })();
 
@@ -129,6 +143,10 @@ function shake(power = 1) {
   el.style.animation = "none"; void el.offsetWidth;
   el.style.animation = `shake ${0.16 + 0.06 * power}s cubic-bezier(.36,.07,.19,.97)`;
   el.style.setProperty("--sh", (5 + 7 * power) + "px");
+}
+function flashScreen() {
+  let f = $("#flash"); if (!f) { f = document.createElement("div"); f.id = "flash"; document.body.appendChild(f); }
+  f.classList.remove("on"); void f.offsetWidth; f.classList.add("on");
 }
 function centerOf(sel) { const r = ($(sel) || {}).getBoundingClientRect ? $(sel).getBoundingClientRect() : null; return r ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : { x: innerWidth / 2, y: innerHeight / 2 }; }
 
@@ -262,7 +280,7 @@ function pips(box, val, max, cls) {
 function slotShow(el, card, turbo) {
   el.innerHTML = ""; el.classList.toggle("empty", !card);
   if (card) {
-    const c = cardEl(card);
+    const c = cardEl(card); c.classList.add("idle");
     if (turbo) { const t = document.createElement("div"); t.className = "turbobadge"; t.textContent = "+2"; c.appendChild(t); }
     el.appendChild(c);
   }
@@ -470,7 +488,7 @@ async function revealAndResolve() {
   const mid = centerOf("#centerMsg");
   if (towed) { flash("🚛 abgeschleppt!"); Snd.place(); FX.burst(centerOf("#oppSlot").x, centerOf("#oppSlot").y, "176,182,190", 20); }
   if (clash) {
-    Snd.clash(); shake(clash.winner === -1 ? 1.3 : 1);
+    Snd.clash(); shake(clash.winner === -1 ? 1.3 : 1); flashScreen();
     FX.ring(mid.x, mid.y, "255,207,63"); FX.burst(mid.x, mid.y, "255,180,60", 34, { spread: 11 });
     if (clash.winner === -1) { markSlot("#meSlot", "lose"); markSlot("#oppSlot", "lose"); FX.burst(mid.x, mid.y, "255,90,90", 30); flash(`Gleichstand ${clash.ea} : ${clash.eb} — beide in die Garage`); }
     else {
@@ -501,6 +519,7 @@ function showSlotReveal(el, d) {
     const c = cardEl(d.card); c.classList.add("reveal");
     if (d.turbo) { const t = document.createElement("div"); t.className = "turbobadge"; t.textContent = "+2"; c.appendChild(t); }
     el.appendChild(c);
+    const r = el.getBoundingClientRect(); FX.ring(r.left + r.width / 2, r.top + r.height / 2, "150,190,255", 16);
   } else {
     el.classList.add("empty");
     const s = document.createElement("div"); s.style.cssText = "font-size:13px;color:#8aa;text-align:center;padding:6px";

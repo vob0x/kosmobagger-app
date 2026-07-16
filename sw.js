@@ -1,7 +1,6 @@
 // KOSMOBAGGER PWA Service-Worker.
-// Strategie: App-Shell (HTML/JS/CSS/Manifest) NETWORK-FIRST (online immer aktuell),
-// Bilder CACHE-FIRST (schnell, offline). Bei jedem Release CACHE-Version erhoehen.
-const CACHE = "kosmobagger-v2";
+// App-Shell NETWORK-FIRST (online aktuell), Medien CACHE-FIRST (offline). Version bei Release erhoehen.
+const CACHE = "kosmobagger-v3";
 const ASSETS = [
   "./",
   "index.html",
@@ -10,11 +9,6 @@ const ASSETS = [
   "engine.js",
   "cards.js",
   "manifest.webmanifest",
-  "icons/apple-touch-icon.png",
-  "icons/favicon-64.png",
-  "icons/icon-192.png",
-  "icons/icon-512-maskable.png",
-  "icons/icon-512.png",
   "cards/ABSCHLEPPER.png",
   "cards/BAU-1_Schaufel-Helfer.png",
   "cards/BAU-2_Mini-Bagger.png",
@@ -43,28 +37,31 @@ const ASSETS = [
   "cards/TRK-4_Schwerlast-Truck.png",
   "cards/TRK-5_Monster-Truck.png",
   "cards/TRK-6_Riesen-Sattelschlepper.png",
+  "icons/apple-touch-icon.png",
+  "icons/favicon-64.png",
+  "icons/icon-192.png",
+  "icons/icon-512-maskable.png",
+  "icons/icon-512.png",
   "assets/batterie.png",
   "assets/kanister.png",
-  "assets/kristall.png"
+  "assets/kristall.png",
+  "assets/sfx/clash.wav",
+  "assets/sfx/click.wav",
+  "assets/sfx/lose.wav",
+  "assets/sfx/place.wav",
+  "assets/sfx/reveal.wav",
+  "assets/sfx/score.wav",
+  "assets/sfx/tick.wav",
+  "assets/sfx/win.wav"
 ];
-
-self.addEventListener("install", e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
-});
-self.addEventListener("activate", e => {
-  e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
-});
+self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting())); });
+self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener("fetch", e => {
-  const req = e.request;
-  if (req.method !== "GET") return;
-  const isImg = /\.(png|jpe?g|webp|svg|gif|woff2?)$/i.test(new URL(req.url).pathname);
-  if (isImg) {
-    e.respondWith(caches.match(req).then(hit => hit || fetch(req).then(res => {
-      const c = res.clone(); caches.open(CACHE).then(ca => ca.put(req, c)).catch(() => {}); return res;
-    })));
+  const req = e.request; if (req.method !== "GET") return;
+  const isMedia = /\.(png|jpe?g|webp|gif|svg|wav|mp3|ogg|woff2?)$/i.test(new URL(req.url).pathname);
+  if (isMedia) {
+    e.respondWith(caches.match(req).then(hit => hit || fetch(req).then(res => { const c = res.clone(); caches.open(CACHE).then(ca => ca.put(req, c)).catch(()=>{}); return res; })));
   } else {
-    e.respondWith(fetch(req).then(res => {
-      const c = res.clone(); caches.open(CACHE).then(ca => ca.put(req, c)).catch(() => {}); return res;
-    }).catch(() => caches.match(req).then(hit => hit || (req.mode === "navigate" ? caches.match("index.html") : undefined))));
+    e.respondWith(fetch(req).then(res => { const c = res.clone(); caches.open(CACHE).then(ca => ca.put(req, c)).catch(()=>{}); return res; }).catch(() => caches.match(req).then(hit => hit || (req.mode === "navigate" ? caches.match("index.html") : undefined))));
   }
 });
