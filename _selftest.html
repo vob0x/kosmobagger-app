@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>KOSMOBAGGER — Das Duell</title>
+<style>
+:root{
+  --bg0:#0b1020; --bg1:#141c33; --panel:#1b2440; --line:#2c3960;
+  --ink:#eef2ff; --dim:#9fb0d6; --gold:#ffcf3f; --good:#37c86a; --bad:#ff5a5a;
+  --cardw: 128px; --cardh: 179px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  color:var(--ink);
+  background:
+    radial-gradient(1200px 700px at 50% -10%, #24305a 0%, var(--bg1) 45%, var(--bg0) 100%);
+  overflow:hidden; user-select:none; -webkit-user-select:none;
+}
+#app{height:100vh;position:relative}
+.screen{position:absolute;inset:0}
+.hidden{display:none !important}
+
+/* ---------- Menue ---------- */
+#menu{display:flex;align-items:center;justify-content:center}
+.menu-box{width:min(560px,92vw);background:rgba(20,28,52,.86);border:1px solid var(--line);
+  border-radius:20px;padding:28px 30px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.menu-box h1{margin:0;font-size:44px;letter-spacing:2px;
+  background:linear-gradient(180deg,#ffe487,#ffb01f);-webkit-background-clip:text;background-clip:text;color:transparent;
+  text-shadow:0 2px 0 rgba(0,0,0,.25)}
+.menu-box .sub{margin:2px 0 22px;color:var(--dim)}
+.opt{margin:14px 0}
+.opt>label{display:block;font-size:13px;color:var(--dim);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px}
+.seg{display:flex;gap:8px;flex-wrap:wrap}
+.seg button{flex:1;min-width:90px;padding:11px 10px;border-radius:11px;border:1px solid var(--line);
+  background:#131a30;color:var(--ink);font-size:14px;cursor:pointer;transition:.12s}
+.seg button:hover{border-color:#4a5c94}
+.seg button.on{background:linear-gradient(180deg,#3a5bd0,#2b47ab);border-color:#6b83d6;box-shadow:0 4px 14px rgba(43,71,171,.5)}
+.big{margin-top:20px;width:100%;padding:15px;border:0;border-radius:13px;cursor:pointer;
+  font-size:18px;font-weight:700;color:#20160a;background:linear-gradient(180deg,#ffd85e,#f5a81c);
+  box-shadow:0 8px 22px rgba(245,168,28,.45)}
+.big:hover{filter:brightness(1.05)}
+.hint{margin-top:16px;color:var(--dim);font-size:12.5px;line-height:1.5}
+
+/* ---------- Tisch ---------- */
+#table{display:flex;flex-direction:column}
+.side{padding:8px 12px}
+.side.opp{border-bottom:1px solid var(--line);background:rgba(10,15,30,.35)}
+.side.me{border-top:1px solid var(--line);background:rgba(10,15,30,.5)}
+.pinfo{display:flex;align-items:center;gap:16px;font-size:15px}
+.pname{font-weight:700;min-width:120px}
+.res{background:#0e1730;border:1px solid var(--line);border-radius:20px;padding:3px 12px;display:inline-flex;align-items:center;gap:6px}
+.res b{font-size:16px}
+.pips{display:inline-flex;gap:3px;margin-left:4px}
+.pips span{width:9px;height:9px;border-radius:50%;background:#2a3a63;border:1px solid #40538c}
+.pips span.f{background:var(--gold);border-color:#caa41f}
+.pips span.b{background:var(--good);border-color:#2a8f4c}
+.crystals{margin-left:auto;font-size:15px;display:inline-flex;align-items:center;gap:4px;font-weight:700}
+.crystals .gem{color:#57d0e8}
+
+.handrow{display:flex;gap:8px;justify-content:center;align-items:flex-end;min-height:calc(var(--cardh) + 8px);
+  padding-top:6px;flex-wrap:nowrap}
+.opphand{min-height:70px}
+.opphand .card{width:52px;height:73px;--cardw:52px;--cardh:73px}
+
+#battle{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;position:relative;
+  background:radial-gradient(600px 300px at 50% 50%, rgba(60,80,150,.18), transparent 70%)}
+.slot-wrap{display:flex;flex-direction:column;align-items:center;gap:4px}
+.slotlabel{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:1px}
+.slot{width:var(--cardw);height:var(--cardh);border-radius:12px;border:2px dashed #33436f;
+  display:flex;align-items:center;justify-content:center;background:rgba(10,16,32,.4)}
+.slot.empty::after{content:"leer";color:#43537f;font-size:12px}
+#centerMsg{min-height:26px;font-size:19px;font-weight:800;text-align:center;letter-spacing:.3px}
+#centerMsg .vs{color:var(--dim);font-weight:600;margin:0 8px}
+
+/* ---------- Karten ---------- */
+.card{width:var(--cardw);height:var(--cardh);border-radius:11px;position:relative;flex:0 0 auto;
+  background-size:cover;background-position:center;box-shadow:0 6px 16px rgba(0,0,0,.5);
+  transition:transform .14s, box-shadow .14s, outline-color .14s;outline:3px solid transparent;background-color:#0d1428}
+.hand .card{cursor:pointer}
+.hand .card:hover{transform:translateY(-14px) scale(1.04);box-shadow:0 16px 30px rgba(0,0,0,.6);z-index:5}
+.card.sel{outline-color:var(--gold);transform:translateY(-16px) scale(1.05)}
+.card.dis{filter:grayscale(.6) brightness(.6);cursor:not-allowed}
+.card.back{background-color:#101a37}
+.card .cost{position:absolute;top:5px;right:5px;display:flex;gap:2px}
+.card .cost i{width:12px;height:12px;border-radius:3px;background:var(--gold);box-shadow:0 0 0 1px #000}
+.card .turbobadge{position:absolute;bottom:5px;left:5px;background:var(--good);color:#06210f;font-weight:800;
+  font-size:11px;padding:1px 6px;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.5)}
+.card.reveal{animation:flip .5s ease}
+@keyframes flip{0%{transform:rotateY(90deg) scale(.9)}100%{transform:rotateY(0) scale(1)}}
+.card.win{outline:3px solid var(--good);box-shadow:0 0 26px rgba(55,200,106,.7)}
+.card.lose{animation:tumble .6s ease forwards}
+@keyframes tumble{to{transform:translateY(80px) rotate(18deg) scale(.7);opacity:0}}
+
+/* ---------- Aktionsleiste ---------- */
+#actionbar{position:absolute;bottom:calc(var(--cardh) + 60px);left:50%;transform:translateX(-50%);
+  display:flex;gap:10px;flex-wrap:wrap;justify-content:center;max-width:92vw;z-index:20}
+#actionbar button{padding:10px 16px;border-radius:11px;border:1px solid #6b83d6;cursor:pointer;font-size:14px;font-weight:600;
+  background:linear-gradient(180deg,#3a5bd0,#2b47ab);color:#fff;box-shadow:0 6px 16px rgba(43,71,171,.4)}
+#actionbar button.ghost{background:#131a30;border-color:var(--line);color:var(--dim)}
+#actionbar button:hover{filter:brightness(1.08)}
+
+#menuBtn{position:absolute;top:8px;right:10px;z-index:30;background:#131a30;color:var(--ink);
+  border:1px solid var(--line);border-radius:9px;width:36px;height:32px;cursor:pointer;font-size:16px}
+
+/* ---------- Overlay ---------- */
+#overlay{position:absolute;inset:0;background:rgba(5,8,18,.72);backdrop-filter:blur(4px);
+  display:flex;align-items:center;justify-content:center;z-index:50}
+#overlay-inner{background:rgba(22,30,54,.96);border:1px solid var(--line);border-radius:18px;
+  padding:26px 30px;text-align:center;max-width:min(560px,92vw);box-shadow:0 24px 70px rgba(0,0,0,.6)}
+#overlay-inner h2{margin:.2em 0 .3em;font-size:28px}
+#overlay-inner p{color:var(--dim);margin:.3em 0 1em}
+#overlay-inner .big{max-width:280px;margin-left:auto;margin-right:auto}
+.pass-emoji{font-size:52px;margin:6px}
+.winbanner{font-size:34px;font-weight:800;color:var(--gold)}
+
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- Startmenue -->
+  <section id="menu" class="screen">
+    <div class="menu-box">
+      <h1>KOSMOBAGGER</h1>
+      <p class="sub">Das Duell — lokal spielbar</p>
+
+      <div class="opt">
+        <label>Gegner</label>
+        <div class="seg" data-opt="mode">
+          <button data-val="ai" class="on">Gegen Computer</button>
+          <button data-val="hot">2 Spieler (Hotseat)</button>
+        </div>
+      </div>
+
+      <div class="opt">
+        <label>Module</label>
+        <div class="seg" data-opt="modules">
+          <button data-val="1">Modul 1 (Treibstoff)</button>
+          <button data-val="2" class="on">Modul 2 (+ Batterien)</button>
+        </div>
+      </div>
+
+      <div class="opt">
+        <label>Kristalle zum Sieg</label>
+        <div class="seg" data-opt="target">
+          <button data-val="3">3 (kurz)</button>
+          <button data-val="5" class="on">5 (normal)</button>
+        </div>
+      </div>
+
+      <div class="opt" id="opt-ai">
+        <label>Stärke des Computers</label>
+        <div class="seg" data-opt="ai">
+          <button data-val="0.6">Leicht</button>
+          <button data-val="0.85" class="on">Mittel</button>
+          <button data-val="0.97">Stark</button>
+        </div>
+      </div>
+
+      <button id="startBtn" class="big">Spiel starten</button>
+      <p class="hint">Grosse Maschine bleibt stehen und kämpft jede Runde weiter — aber sie zu bauen kostet Sparen. Wer zuerst genug Kristalle sammelt, gewinnt.</p>
+    </div>
+  </section>
+
+  <!-- Spieltisch -->
+  <section id="table" class="screen hidden">
+    <div id="oppArea" class="side opp">
+      <div class="pinfo">
+        <span class="pname"></span>
+        <span class="res tank" title="Tank">⛽ <b class="fuel">0</b></span>
+        <span class="res batt" title="Batterien">🔋 <b class="bat">0</b></span>
+        <span class="crystals"></span>
+      </div>
+      <div class="handrow opphand"></div>
+    </div>
+
+    <div id="battle">
+      <div class="slot-wrap opp-slot"><div class="slotlabel">Gegner</div><div class="slot" id="oppSlot"></div></div>
+      <div id="centerMsg"></div>
+      <div class="slot-wrap me-slot"><div class="slotlabel">Du</div><div class="slot" id="meSlot"></div></div>
+    </div>
+
+    <div id="meArea" class="side me">
+      <div class="pinfo">
+        <span class="pname"></span>
+        <span class="res tank">⛽ <b class="fuel">0</b><i class="pips fuelpips"></i></span>
+        <span class="res batt">🔋 <b class="bat">0</b><i class="pips batpips"></i></span>
+        <span class="crystals"></span>
+      </div>
+      <div class="handrow mehand"></div>
+    </div>
+
+    <div id="actionbar"></div>
+    <button id="menuBtn" title="Zurück zum Menü">☰</button>
+  </section>
+
+  <!-- Overlay (Aufdecken / Weitergeben / Sieg / Aktionen) -->
+  <div id="overlay" class="hidden"><div id="overlay-inner"></div></div>
+</div>
+
+<script>
+// ==== cards ====
+
+// Auto-generiert aus den Karten-PNGs. KOSMOBAGGER Kartendaten.
+const MACHINES = [
+  {
+    "id": "BAU-1",
+    "world": "BAU",
+    "wcode": "BAU",
+    "kraft": 1,
+    "cost": 1,
+    "name": "Schaufel-Helfer",
+    "img": "cards/BAU-1_Schaufel-Helfer.png"
+  },
+  {
+    "id": "BAU-2",
+    "world": "BAU",
+    "wcode": "BAU",
+    "kraft": 2,
+    "cost": 1,
+    "name": "Mini-Bagger",
+    "img": "cards/BAU-2_Mini-Bagger.png"
+  },
+  {
+    "id": "BAU-3",
+    "world": "BAU",
+    "wcode": "BAU",
+    "kraft": 3,
+    "cost": 2,
+    "name": "Radlader",
+    "img": "cards/BAU-3_Radlader.png"
+  },
+  {
+    "id": "BAU-4",
+    "world": "BAU",
+    "wcode": "BAU",
+    "kraft": 4,
+    "cost": 2,
+    "name": "Beton-Mischer",
+    "img": "cards/BAU-4_Beton-Mischer.png"
+  },
+  {
+    "id": "BAU-5",
+    "world": "BAU",
+    "wcode": "BAU",
+    "kraft": 5,
+    "cost": 3,
+    "name": "Turbo-Bagger",
+    "img": "cards/BAU-5_Turbo-Bagger.png"
+  },
+  {
+    "id": "BAU-6",
+    "world": "BAU",
+    "wcode": "BAU",
+    "kraft": 6,
+    "cost": 3,
+    "name": "Riesen-Kran",
+    "img": "cards/BAU-6_Riesen-Kran.png"
+  },
+  {
+    "id": "KOS-1",
+    "world": "KOSMOS",
+    "wcode": "KOS",
+    "kraft": 1,
+    "cost": 1,
+    "name": "Sternen-Funke",
+    "img": "cards/KOS-1_Sternen-Funke.png"
+  },
+  {
+    "id": "KOS-2",
+    "world": "KOSMOS",
+    "wcode": "KOS",
+    "kraft": 2,
+    "cost": 1,
+    "name": "Raketen-Flitzer",
+    "img": "cards/KOS-2_Raketen-Flitzer.png"
+  },
+  {
+    "id": "KOS-3",
+    "world": "KOSMOS",
+    "wcode": "KOS",
+    "kraft": 3,
+    "cost": 2,
+    "name": "Mond-Rover",
+    "img": "cards/KOS-3_Mond-Rover.png"
+  },
+  {
+    "id": "KOS-4",
+    "world": "KOSMOS",
+    "wcode": "KOS",
+    "kraft": 4,
+    "cost": 2,
+    "name": "Sternen-Kran",
+    "img": "cards/KOS-4_Sternen-Kran.png"
+  },
+  {
+    "id": "KOS-5",
+    "world": "KOSMOS",
+    "wcode": "KOS",
+    "kraft": 5,
+    "cost": 3,
+    "name": "Planeten-Bohrer",
+    "img": "cards/KOS-5_Planeten-Bohrer.png"
+  },
+  {
+    "id": "KOS-6",
+    "world": "KOSMOS",
+    "wcode": "KOS",
+    "kraft": 6,
+    "cost": 3,
+    "name": "Galaxie-Riese",
+    "img": "cards/KOS-6_Galaxie-Riese.png"
+  },
+  {
+    "id": "TEC-1",
+    "world": "TECHNIK",
+    "wcode": "TEC",
+    "kraft": 1,
+    "cost": 1,
+    "name": "Schrauben-Bot",
+    "img": "cards/TEC-1_Schrauben-Bot.png"
+  },
+  {
+    "id": "TEC-2",
+    "world": "TECHNIK",
+    "wcode": "TEC",
+    "kraft": 2,
+    "cost": 1,
+    "name": "Helfer-Roboter",
+    "img": "cards/TEC-2_Helfer-Roboter.png"
+  },
+  {
+    "id": "TEC-3",
+    "world": "TECHNIK",
+    "wcode": "TEC",
+    "kraft": 3,
+    "cost": 2,
+    "name": "Bohr-Roboter",
+    "img": "cards/TEC-3_Bohr-Roboter.png"
+  },
+  {
+    "id": "TEC-4",
+    "world": "TECHNIK",
+    "wcode": "TEC",
+    "kraft": 4,
+    "cost": 2,
+    "name": "Blitz-Drohne",
+    "img": "cards/TEC-4_Blitz-Drohne.png"
+  },
+  {
+    "id": "TEC-5",
+    "world": "TECHNIK",
+    "wcode": "TEC",
+    "kraft": 5,
+    "cost": 3,
+    "name": "Mega-Roboter",
+    "img": "cards/TEC-5_Mega-Roboter.png"
+  },
+  {
+    "id": "TEC-6",
+    "world": "TECHNIK",
+    "wcode": "TEC",
+    "kraft": 6,
+    "cost": 3,
+    "name": "Boss-Roboter",
+    "img": "cards/TEC-6_Boss-Roboter.png"
+  },
+  {
+    "id": "TRK-1",
+    "world": "TRUCKS",
+    "wcode": "TRK",
+    "kraft": 1,
+    "cost": 1,
+    "name": "Flink-Lieferwagen",
+    "img": "cards/TRK-1_Flink-Lieferwagen.png"
+  },
+  {
+    "id": "TRK-2",
+    "world": "TRUCKS",
+    "wcode": "TRK",
+    "kraft": 2,
+    "cost": 1,
+    "name": "Flitzer-Truck",
+    "img": "cards/TRK-2_Flitzer-Truck.png"
+  },
+  {
+    "id": "TRK-3",
+    "world": "TRUCKS",
+    "wcode": "TRK",
+    "kraft": 3,
+    "cost": 2,
+    "name": "Tank-Laster",
+    "img": "cards/TRK-3_Tank-Laster.png"
+  },
+  {
+    "id": "TRK-4",
+    "world": "TRUCKS",
+    "wcode": "TRK",
+    "kraft": 4,
+    "cost": 2,
+    "name": "Schwerlast-Truck",
+    "img": "cards/TRK-4_Schwerlast-Truck.png"
+  },
+  {
+    "id": "TRK-5",
+    "world": "TRUCKS",
+    "wcode": "TRK",
+    "kraft": 5,
+    "cost": 3,
+    "name": "Monster-Truck",
+    "img": "cards/TRK-5_Monster-Truck.png"
+  },
+  {
+    "id": "TRK-6",
+    "world": "TRUCKS",
+    "wcode": "TRK",
+    "kraft": 6,
+    "cost": 3,
+    "name": "Riesen-Sattelschlepper",
+    "img": "cards/TRK-6_Riesen-Sattelschlepper.png"
+  }
+];
+
+const SPECIALS = [
+  {
+    "id": "BOOSTER_FUEL",
+    "kind": "booster",
+    "gives": "fuel",
+    "name": "Booster: Kanister",
+    "img": "cards/BOOSTER_FUEL.png"
+  },
+  {
+    "id": "BOOSTER_BAT",
+    "kind": "booster",
+    "gives": "bat",
+    "name": "Booster: Batterie",
+    "img": "cards/BOOSTER_BAT.png"
+  },
+  {
+    "id": "ABSCHLEPPER",
+    "kind": "tow",
+    "name": "Abschlepper",
+    "img": "cards/ABSCHLEPPER.png"
+  }
+];
+
+const CARD_BACK = "cards/RUECKSEITE.png";
+
+const WORLD_COLORS = { KOSMOS:'#3b6fd6', BAU:'#e6a81f', TRUCKS:'#d33b34', TECHNIK:'#37a85a' };
+
+// ==== engine ====
+
+// KOSMOBAGGER - Spiel-Engine (volle Regeln). Framework-frei, laeuft im Browser und in Node.
+// Rundenstruktur: Einkommen -> gleichzeitig verdeckt bauen -> aufdecken/Kampf -> nachziehen.
+
+const TANK_MAX = 3;
+const BAT_MAX = 2;
+
+function cost(kraft) { return kraft <= 2 ? 1 : (kraft <= 4 ? 2 : 3); }
+
+function shuffle(a, rng = Math.random) {
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+let _uid = 1;
+function inst(def) { return { ...def, uid: _uid++ }; }
+
+// Baut eine Deckliste (Karten-Instanzen) nach Optionen.
+function buildDeck(opts) {
+  const cards = [];
+  const copies = opts.deckDoubled ? 2 : 1;
+  for (let c = 0; c < copies; c++) for (const m of MACHINES) cards.push(inst(m));
+  if (opts.modules >= 2 || opts.boosters) {
+    const bf = SPECIALS.find(s => s.id === "BOOSTER_FUEL");
+    const bb = SPECIALS.find(s => s.id === "BOOSTER_BAT");
+    for (let i = 0; i < (opts.boosters ?? 0); i++) cards.push(inst(i % 2 === 0 ? bf : bb));
+  }
+  const tow = SPECIALS.find(s => s.id === "ABSCHLEPPER");
+  for (let i = 0; i < (opts.tows ?? 0); i++) cards.push(inst(tow));
+  return cards;
+}
+
+function newPlayer(idx, name, isAI, opts, rng) {
+  const deck = shuffle(buildDeck(opts), rng);
+  const hand = [];
+  for (let i = 0; i < 3 && deck.length; i++) hand.push(deck.pop());
+  return {
+    idx, name, isAI,
+    deck, hand, garage: [],
+    fuel: 0, bat: 0, crystals: 0,
+    slot: null, slotTurbo: false,
+    income: null,       // gewaehlte Einkommensart diese Runde
+    pending: null,      // committed Aktion
+  };
+}
+
+class Game {
+  constructor(opts = {}) {
+    this.opts = Object.assign({
+      modules: 2, target: 5, deckDoubled: true, boosters: 4, tows: 2,
+      names: ["Spieler", "Computer"], ai: [false, true], aiLevel: 0.85,
+    }, opts);
+    const rng = Math.random;
+    this.players = [
+      newPlayer(0, this.opts.names[0], this.opts.ai[0], this.opts, rng),
+      newPlayer(1, this.opts.names[1], this.opts.ai[1], this.opts, rng),
+    ];
+    this.round = 0;
+    this.phase = "income";     // income | commit | resolve | gameover
+    this.winner = null;
+    this.log = [];
+    this.lastEvents = [];
+    this.beginRound();
+  }
+
+  opp(i) { return this.players[1 - i]; }
+
+  beginRound() {
+    this.round++;
+    for (const p of this.players) { p.income = null; p.pending = null; }
+    this.phase = "act";
+    for (const p of this.players) {
+      if (this.opts.modules < 2) this.setIncome(p.idx, "fuel");      // Modul 1: immer Kanister
+      if (p.isAI) {
+        if (!p.income) this.setIncome(p.idx, this.aiIncome(p));
+        p.pending = this.aiChoose(p);
+      }
+    }
+  }
+
+  aiIncome(p) {
+    // Batterie holen, wenn Tank schon ordentlich gefuellt und Batteriefach Platz hat.
+    if (this.opts.modules >= 2 && p.bat < BAT_MAX && p.fuel >= 2) return "bat";
+    if (p.fuel < TANK_MAX) return "fuel";
+    if (p.bat < BAT_MAX) return "bat";
+    return "fuel";
+  }
+
+  setIncome(i, kind) {
+    const p = this.players[i];
+    if (p.income) return;
+    p.income = kind;
+    if (kind === "bat" && p.bat < BAT_MAX) p.bat++;
+    else if (p.fuel < TANK_MAX) p.fuel++;
+    else if (p.bat < BAT_MAX) p.bat++;       // Tank voll -> Batterie als Ausweich
+  }
+
+  needsIncome(i) { return this.opts.modules >= 2 && !this.players[i].income; }
+  needsCommit(i) { return !this.players[i].pending; }
+  ready() { return this.players.every(p => p.income && p.pending); }
+
+  // --- Legale Aktionen fuer Spieler i in der Commit-Phase ---
+  legalActions(i) {
+    const p = this.players[i];
+    const acts = [];
+    if (p.slot) { acts.push({ type: "none", label: "Maschine kaempft weiter" }); return acts; }
+    // Maschinen bauen (bezahlbar)
+    for (const c of p.hand) {
+      if (c.kraft && c.cost <= p.fuel) {
+        acts.push({ type: "build", uid: c.uid, turbo: false });
+        if (this.opts.modules >= 2 && p.bat > 0)
+          acts.push({ type: "build", uid: c.uid, turbo: true });
+      }
+    }
+    // Booster
+    for (const c of p.hand) if (c.kind === "booster")
+      acts.push({ type: "booster", uid: c.uid });
+    // Abschlepper (modal)
+    for (const c of p.hand) if (c.kind === "tow") {
+      if (this.opp(i).slot) acts.push({ type: "tow", uid: c.uid, mode: "tow" });
+      acts.push({ type: "tow", uid: c.uid, mode: "plus", plusType: "fuel" });
+      if (this.opts.modules >= 2) acts.push({ type: "tow", uid: c.uid, mode: "plus", plusType: "bat" });
+    }
+    // Reparieren (2 Batterien -> Maschine aus Garage auf die Hand)
+    if (this.opts.modules >= 2 && p.bat >= 2 && p.garage.some(c => c.kraft))
+      acts.push({ type: "repair" });
+    acts.push({ type: "pass", label: "Sparen (nichts bauen)" });
+    return acts;
+  }
+
+  commit(i, action) {
+    const p = this.players[i];
+    if (this.phase !== "act" || p.pending) return false;
+    p.pending = action;
+    return true;
+  }
+
+  bothCommitted() { return this.players.every(p => p.pending); }
+
+  handCard(p, uid) { return p.hand.find(c => c.uid === uid); }
+
+  // --- Runde aufloesen: Aktionen anwenden + Kampf + nachziehen. Gibt Events zurueck. ---
+  resolve() {
+    const ev = [];
+    const pre = this.players.map(p => p.slot);   // stehende Maschinen VOR den Bauten
+
+    // 1) Bauten/Booster/Repair/Plus zuerst
+    this.players.forEach((p, i) => {
+      const a = p.pending || { type: "pass" };
+      if (a.type === "build") {
+        const c = this.handCard(p, a.uid);
+        p.hand = p.hand.filter(x => x.uid !== c.uid);
+        p.fuel -= c.cost;
+        p.slot = c; p.slotTurbo = false;
+        if (a.turbo && p.bat > 0) { p.bat--; p.slotTurbo = true; }
+        ev.push({ t: "build", i, card: c, turbo: p.slotTurbo });
+      } else if (a.type === "booster") {
+        const c = this.handCard(p, a.uid);
+        p.hand = p.hand.filter(x => x.uid !== c.uid); p.garage.push(c);
+        this.gain(p, c.gives === "bat" ? "bat" : "fuel");
+        ev.push({ t: "booster", i, gives: c.gives });
+      } else if (a.type === "tow") {
+        const c = this.handCard(p, a.uid);
+        p.hand = p.hand.filter(x => x.uid !== c.uid); p.garage.push(c);
+        if (a.mode === "plus") { this.gain(p, a.plusType || "fuel"); ev.push({ t: "towplus", i, gives: a.plusType }); }
+        else ev.push({ t: "towpick", i });   // eigentliche Wirkung unten (auf pre-Slot)
+      } else if (a.type === "repair") {
+        if (p.bat >= 2) {
+          const idx = p.garage.findIndex(c => c.kraft);
+          if (idx >= 0) { p.bat -= 2; const c = p.garage.splice(idx, 1)[0]; p.hand.push(c); ev.push({ t: "repair", i, card: c }); }
+        }
+      } else {
+        ev.push({ t: "pass", i });
+      }
+    });
+
+    // 2) Abschleppen wirkt auf die VOR der Runde stehende Gegnermaschine
+    this.players.forEach((p, i) => {
+      if ((p.pending || {}).type === "tow" && p.pending.mode === "tow") {
+        const o = this.opp(i);
+        if (pre[o.idx]) {              // nur eine wirklich stehende Maschine
+          const towed = pre[o.idx];
+          o.garage.push(towed); o.slot = null; o.slotTurbo = false;
+          ev.push({ t: "towed", i, victim: o.idx, card: towed });
+        }
+      }
+    });
+
+    // 3) Kampf
+    const a = this.players[0], b = this.players[1];
+    const ea = a.slot ? a.slot.kraft + (a.slotTurbo ? 2 : 0) : null;
+    const eb = b.slot ? b.slot.kraft + (b.slotTurbo ? 2 : 0) : null;
+    if (a.slot && b.slot) {
+      if (ea > eb) { b.garage.push(b.slot); b.slot = null; ev.push({ t: "clash", winner: 0, ea, eb }); }
+      else if (eb > ea) { a.garage.push(a.slot); a.slot = null; ev.push({ t: "clash", winner: 1, ea, eb }); }
+      else { a.garage.push(a.slot); b.garage.push(b.slot); a.slot = b.slot = null; ev.push({ t: "clash", winner: -1, ea, eb }); }
+    } else if (a.slot) { a.crystals++; ev.push({ t: "score", i: 0 }); }
+    else if (b.slot) { b.crystals++; ev.push({ t: "score", i: 1 }); }
+    else { ev.push({ t: "nothing" }); }
+    a.slotTurbo = false; b.slotTurbo = false;   // Turbo-Batterie ist nach dem Kampf verbraucht
+
+    // 4) Nachziehen
+    for (const p of this.players) this.drawUp(p);
+
+    // 5) Sieg?
+    for (const p of this.players) { p.income = null; p.pending = null; }
+    const win = this.players.find(p => p.crystals >= this.opts.target);
+    if (win) { this.winner = win.idx; this.phase = "gameover"; ev.push({ t: "win", i: win.idx }); }
+    else this.beginRound();
+
+    this.lastEvents = ev;
+    return ev;
+  }
+
+  gain(p, kind) {
+    if (kind === "bat") { if (p.bat < BAT_MAX) p.bat++; else if (p.fuel < TANK_MAX) p.fuel++; }
+    else { if (p.fuel < TANK_MAX) p.fuel++; else if (p.bat < BAT_MAX) p.bat++; }
+  }
+
+  drawUp(p) {
+    while (p.hand.length < 3 && (p.deck.length || p.garage.length)) {
+      if (!p.deck.length) { p.deck = shuffle(p.garage); p.garage = []; }
+      p.hand.push(p.deck.pop());
+    }
+  }
+
+  // --- KI: waehlt eine Aktion (greedy Spar-/Konter-Strategie) ---
+  aiChoose(p) {
+    const i = p.idx, o = this.opp(i);
+    const acts = this.legalActions(i);
+    if (acts.length === 1) return acts[0];                 // z.B. slot besetzt -> none
+    const affordable = p.hand.filter(c => c.kraft && c.cost <= p.fuel);
+    const level = this.opts.aiLevel ?? 0.85;
+    if (Math.random() > level) {                            // Schwaeche: manchmal zufaellig
+      const pool = acts.filter(a => a.type === "build");
+      if (pool.length) return pool[Math.floor(Math.random() * pool.length)];
+    }
+    const gk = o.slot ? o.slot.kraft : null;               // stehende Gegnermaschine
+    const behind = p.crystals <= o.crystals;
+
+    // Gegen eine stehende Wand, die ich nicht packe: Abschlepper (falls vorhanden)
+    if (gk !== null) {
+      const canBeat = affordable.some(c => c.kraft > gk || (p.bat > 0 && c.kraft + 2 > gk));
+      const canTie = affordable.some(c => c.kraft === gk || (p.bat > 0 && c.kraft + 2 === gk));
+      const tow = acts.find(a => a.type === "tow" && a.mode === "tow");
+      if (tow && !canBeat && !canTie && gk >= 4) return tow;
+      // schlagen (billigste ausreichende), sonst gleichziehen
+      const beats = affordable.filter(c => c.kraft > gk);
+      const ties = affordable.filter(c => c.kraft === gk);
+      if (beats.length) { const c = beats.sort((x, y) => x.cost - y.cost || x.kraft - y.kraft)[0]; return { type: "build", uid: c.uid, turbo: false }; }
+      if (p.bat > 0) {
+        const turboBeat = affordable.filter(c => c.kraft + 2 > gk && c.kraft <= gk);
+        if (turboBeat.length) { const c = turboBeat.sort((x, y) => y.kraft - x.kraft)[0]; return { type: "build", uid: c.uid, turbo: true }; }
+      }
+      if (ties.length) { const c = ties[0]; return { type: "build", uid: c.uid, turbo: false }; }
+    }
+
+    if (affordable.length) {
+      // Kein Gegner steht: groesste bezahlbare Maschine bauen (Sparen zahlt sich aus)
+      const c = affordable.sort((x, y) => y.kraft - x.kraft)[0];
+      const turbo = this.opts.modules >= 2 && p.bat > 0 && behind && c.kraft >= 4;
+      return { type: "build", uid: c.uid, turbo };
+    }
+    // Nichts bezahlbar: Reparieren > Booster > Abschlepper-Plus > Pass
+    if (acts.some(a => a.type === "repair")) return { type: "repair" };
+    const boost = acts.find(a => a.type === "booster");
+    if (boost) return boost;
+    const plus = acts.find(a => a.type === "tow" && a.mode === "plus");
+    if (plus) return plus;
+    return { type: "pass" };
+  }
+}
+
+// ==== app ====
+
+
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+const cfg = { mode: "ai", modules: 2, target: 5, ai: 0.85 };
+let game = null;
+let persp = 0;          // aus wessen Sicht der Tisch gerade gezeigt wird
+
+// ---------- Menue ----------
+$$("#menu .seg").forEach(seg => {
+  seg.addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    seg.querySelectorAll("button").forEach(x => x.classList.remove("on"));
+    b.classList.add("on");
+    const opt = seg.dataset.opt, val = b.dataset.val;
+    cfg[opt] = (opt === "target" || opt === "modules") ? +val : (opt === "ai" ? +val : val);
+    if (opt === "mode") $("#opt-ai").style.display = val === "ai" ? "" : "none";
+  });
+});
+$("#startBtn").addEventListener("click", startGame);
+$("#menuBtn").addEventListener("click", () => { $("#table").classList.add("hidden"); $("#menu").classList.remove("hidden"); hideOverlay(); });
+
+function startGame() {
+  const hot = cfg.mode === "hot";
+  game = new Game({
+    modules: cfg.modules, target: cfg.target,
+    deckDoubled: true, boosters: cfg.modules >= 2 ? 4 : 2, tows: 2,
+    names: hot ? ["Spieler 1", "Spieler 2"] : ["Du", "Computer"],
+    ai: hot ? [false, false] : [false, true],
+    aiLevel: cfg.ai,
+  });
+  $("#menu").classList.add("hidden");
+  $("#table").classList.remove("hidden");
+  persp = 0;
+  advance();
+}
+
+// ---------- Overlay-Helfer ----------
+const ov = $("#overlay"), ovi = $("#overlay-inner");
+function showOverlay(html) { ovi.innerHTML = html; ov.classList.remove("hidden"); }
+function hideOverlay() { ov.classList.add("hidden"); }
+
+// ---------- Rendering ----------
+function cardEl(card, { back = false, small = false } = {}) {
+  const d = document.createElement("div");
+  d.className = "card" + (back ? " back" : "");
+  d.style.backgroundImage = `url("${back ? CARD_BACK : card.img}")`;
+  if (!back && card && card.kraft) {
+    const c = document.createElement("div"); c.className = "cost";
+    for (let i = 0; i < card.cost; i++) c.appendChild(document.createElement("i"));
+    d.appendChild(c);
+  }
+  return d;
+}
+
+function renderBoard() {
+  const me = game.players[persp], op = game.players[1 - persp];
+  // Info
+  const meA = $("#meArea"), opA = $("#oppArea");
+  meA.querySelector(".pname").textContent = me.name;
+  opA.querySelector(".pname").textContent = op.name;
+  for (const [area, p] of [[meA, me], [opA, op]]) {
+    area.querySelector(".fuel").textContent = p.fuel;
+    area.querySelector(".bat").textContent = p.bat;
+    area.querySelector(".crystals").innerHTML = `<span class="gem">◆</span> ${p.crystals} / ${game.opts.target}`;
+  }
+  // Pips (nur meine Seite)
+  pips(meA.querySelector(".fuelpips"), me.fuel, 3, "f");
+  pips(meA.querySelector(".batpips"), me.bat, 2, "b");
+  // Batteriefelder ausblenden in Modul 1
+  meA.querySelector(".batt").style.display = opA.querySelector(".batt").style.display =
+    game.opts.modules >= 2 ? "" : "none";
+
+  // Gegnerhand (Rueckseiten)
+  const oh = opA.querySelector(".opphand"); oh.innerHTML = "";
+  for (let i = 0; i < op.hand.length; i++) oh.appendChild(cardEl(null, { back: true }));
+
+  // Slots (stehende Maschinen)
+  slotShow($("#oppSlot"), op.slot, op.slotTurbo);
+  slotShow($("#meSlot"), me.slot, me.slotTurbo);
+
+  // Meine Hand
+  renderHand();
+}
+
+function pips(box, val, max, cls) {
+  box.innerHTML = "";
+  for (let i = 0; i < max; i++) {
+    const s = document.createElement("span");
+    if (i < val) s.className = cls;
+    box.appendChild(s);
+  }
+}
+
+function slotShow(el, card, turbo) {
+  el.innerHTML = ""; el.classList.toggle("empty", !card);
+  if (card) {
+    const c = cardEl(card);
+    if (turbo) { const t = document.createElement("div"); t.className = "turbobadge"; t.textContent = "+2"; c.appendChild(t); }
+    el.appendChild(c);
+  }
+}
+
+let selUid = null;
+function renderHand() {
+  const me = game.players[persp];
+  const row = $("#meArea .mehand"); row.innerHTML = ""; row.classList.add("hand");
+  const canAct = acting && game.needsCommit(persp) && !game.needsIncome(persp);
+  const affordableBuild = canAct && !me.slot;
+  for (const card of me.hand) {
+    const el = cardEl(card);
+    const playableMachine = card.kraft && card.cost <= me.fuel && affordableBuild;
+    const playableSpecial = (card.kind === "booster" || card.kind === "tow") && affordableBuild;
+    if (canAct && (playableMachine || playableSpecial)) {
+      el.classList.toggle("sel", selUid === card.uid);
+      el.addEventListener("click", () => { selUid = card.uid; renderHand(); showActions(card); });
+    } else if (canAct) {
+      el.classList.add("dis");
+    }
+    row.appendChild(el);
+  }
+}
+
+// ---------- Aktionsleiste ----------
+function clearActions() { $("#actionbar").innerHTML = ""; }
+function addBtn(label, fn, ghost) {
+  const b = document.createElement("button"); b.textContent = label; if (ghost) b.className = "ghost";
+  b.addEventListener("click", fn); $("#actionbar").appendChild(b); return b;
+}
+
+function showActions(card) {
+  const me = game.players[persp];
+  clearActions();
+  if (card.kraft) {
+    addBtn(`Bauen  (${card.cost} ⛽)`, () => doCommit({ type: "build", uid: card.uid, turbo: false }));
+    if (game.opts.modules >= 2 && me.bat > 0)
+      addBtn(`Bauen + Turbo 🔋 (+2)`, () => doCommit({ type: "build", uid: card.uid, turbo: true }));
+  } else if (card.kind === "booster") {
+    addBtn(`Ausspielen: +1 ${card.gives === "bat" ? "🔋" : "⛽"}`, () => doCommit({ type: "booster", uid: card.uid }));
+  } else if (card.kind === "tow") {
+    if (game.players[1 - persp].slot) addBtn(`Abschleppen 🚛`, () => doCommit({ type: "tow", uid: card.uid, mode: "tow" }));
+    addBtn(`Nachschub: +1 ⛽`, () => doCommit({ type: "tow", uid: card.uid, mode: "plus", plusType: "fuel" }));
+    if (game.opts.modules >= 2) addBtn(`Nachschub: +1 🔋`, () => doCommit({ type: "tow", uid: card.uid, mode: "plus", plusType: "bat" }));
+  }
+  addBtn("Zurück", () => { selUid = null; renderHand(); baseActions(); }, true);
+}
+
+function baseActions() {
+  const me = game.players[persp];
+  clearActions();
+  if (game.opts.modules >= 2 && me.bat >= 2 && me.garage.some(c => c.kraft))
+    addBtn("Reparieren (2 🔋)", () => doCommit({ type: "repair" }));
+  addBtn("Sparen (nichts bauen)", () => doCommit({ type: "pass" }), true);
+}
+
+// ---------- Ablauf ----------
+let acting = false;
+
+async function advance() {
+  hideOverlay(); clearActions(); selUid = null;
+  if (game.phase === "gameover") return winScreen();
+
+  // Naechster Mensch, der noch handeln muss?
+  const human = game.players.find(p => !p.isAI && (game.needsIncome(p.idx) || game.needsCommit(p.idx)));
+  if (!human) return revealAndResolve();       // alle bereit (KI hat schon committed)
+
+  persp = human.idx;
+  const hot = cfg.mode === "hot";
+  const otherHumanActed = game.players.some(p => !p.isAI && p.idx !== human.idx && p.pending);
+  if (hot && otherHumanActed) {
+    // Geraet weitergeben
+    acting = false; renderBoardHidden();
+    showOverlay(`<div class="pass-emoji">🔄</div><h2>${human.name} ist dran</h2>
+      <p>Bildschirm an ${human.name} weitergeben, dann tippen.</p>
+      <button class="big" id="goBtn">Bereit</button>`);
+    $("#goBtn").onclick = () => startHumanTurn(human);
+  } else {
+    startHumanTurn(human);
+  }
+}
+
+function renderBoardHidden() {
+  // Tisch neutral (fuer Weitergabe): nichts Verraeterisches
+  $("#meArea .mehand").innerHTML = "";
+  $("#oppArea .opphand").innerHTML = "";
+}
+
+function startHumanTurn(human) {
+  hideOverlay(); acting = true; persp = human.idx;
+  renderBoard();
+  if (game.needsIncome(human.idx)) return promptIncome(human);
+  promptCommit(human);
+}
+
+function promptIncome(human) {
+  clearActions();
+  showOverlay(`<h2>Einkommen</h2><p>Nimm eines pro Runde:</p>
+    <div style="display:flex;gap:12px;justify-content:center">
+      <button class="big" style="max-width:170px" id="inFuel">⛽ Kanister</button>
+      <button class="big" style="max-width:170px;background:linear-gradient(180deg,#5be08a,#28a35a)" id="inBat">🔋 Batterie</button>
+    </div>`);
+  const pick = k => { game.setIncome(human.idx, k); hideOverlay(); renderBoard(); promptCommit(human); };
+  $("#inFuel").onclick = () => pick("fuel");
+  $("#inBat").onclick = () => pick("bat");
+}
+
+function promptCommit(human) {
+  renderBoard();
+  const acts = game.legalActions(human.idx);
+  if (acts.length === 1 && acts[0].type === "none") {   // Maschine kaempft weiter -> keine Wahl
+    flash(`${human.name}: deine Maschine kämpft weiter`);
+    game.commit(human.idx, acts[0]); setTimeout(advance, 650); return;
+  }
+  baseActions();
+  flash("");
+}
+
+function doCommit(action) {
+  if (!acting) return;
+  acting = false;
+  game.commit(persp, action);
+  clearActions(); selUid = null;
+  advance();
+}
+
+function flash(msg) { $("#centerMsg").textContent = msg; }
+
+// ---------- Aufdecken & Kampf ----------
+async function revealAndResolve() {
+  acting = false; persp = 0; renderBoard();
+  const A = game.players[0], B = game.players[1];
+  const pre = [A.slot, B.slot];
+  const disp = i => {
+    const p = game.players[i], a = p.pending || { type: "pass" };
+    if (a.type === "build") return { card: game.handCard(p, a.uid), turbo: a.turbo && p.bat > 0 };
+    if (p.slot) return { card: p.slot, turbo: p.slotTurbo };
+    if (a.type === "tow") return { label: "🚛 Abschlepper" };
+    if (a.type === "booster") return { label: "🛢 Booster" };
+    if (a.type === "repair") return { label: "🔧 Reparieren" };
+    return { label: "💤 Sparen" };
+  };
+  // Aufdeck-Anzeige (vor der Aufloesung)
+  showSlotReveal($("#meSlot"), disp(0));
+  showSlotReveal($("#oppSlot"), disp(1));
+  flash("Aufdecken!");
+  await sleep(750);
+
+  const ev = game.resolve();     // mutiert Zustand; danach lesen wir die Events
+  // Kampf-Animation
+  const clash = ev.find(e => e.t === "clash");
+  const score = ev.find(e => e.t === "score");
+  const towed = ev.find(e => e.t === "towed");
+  if (towed) flash("🚛 abgeschleppt!");
+  if (clash) {
+    if (clash.winner === -1) { markSlot("#meSlot", "lose"); markSlot("#oppSlot", "lose"); flash(`Gleichstand ${clash.ea} : ${clash.eb} — beide in die Garage`); }
+    else {
+      const meWon = clash.winner === 0;
+      markSlot(meWon ? "#meSlot" : "#oppSlot", "win");
+      markSlot(meWon ? "#oppSlot" : "#meSlot", "lose");
+      flash(`${clash.ea} : ${clash.eb} — ${meWon ? game.players[0].name : game.players[1].name} gewinnt`);
+    }
+  } else if (score) {
+    flash(`${game.players[score.i].name} kommt durch — ◆ +1 Kristall`);
+    markSlot(score.i === 0 ? "#meSlot" : "#oppSlot", "win");
+  } else if (!towed) {
+    flash("Nichts passiert");
+  }
+  const win = ev.find(e => e.t === "win");
+  await sleep(win ? 700 : 1150);
+  advance();
+}
+
+function showSlotReveal(el, d) {
+  el.innerHTML = ""; el.classList.remove("empty");
+  if (d.card) {
+    const c = cardEl(d.card); c.classList.add("reveal");
+    if (d.turbo) { const t = document.createElement("div"); t.className = "turbobadge"; t.textContent = "+2"; c.appendChild(t); }
+    el.appendChild(c);
+  } else {
+    el.classList.add("empty");
+    const s = document.createElement("div"); s.style.cssText = "font-size:13px;color:#8aa;text-align:center;padding:6px";
+    s.textContent = d.label || ""; el.appendChild(s);
+  }
+}
+function markSlot(sel, cls) { const c = $(sel).querySelector(".card"); if (c) c.classList.add(cls); }
+
+function winScreen() {
+  const w = game.players[game.winner];
+  showOverlay(`<div class="winbanner">🏆 ${w.name} gewinnt!</div>
+    <p>${w.crystals} Kristalle gesammelt in ${game.round} Runden.</p>
+    <button class="big" id="againBtn">Nochmal</button>
+    <button class="big" id="menu2" style="background:#131a30;color:#cfe;margin-top:10px">Menü</button>`);
+  $("#againBtn").onclick = startGame;
+  $("#menu2").onclick = () => { hideOverlay(); $("#table").classList.add("hidden"); $("#menu").classList.remove("hidden"); };
+}
+
+window.addEventListener('load', function(){
+  try{
+    cfg.mode='ai';
+    function fresh(){ return new Game({modules:2,target:5,deckDoubled:true,boosters:4,tows:2,names:['Nord','Sued'],ai:[true,true],aiLevel:0.9}); }
+    game=fresh();
+    document.querySelector('#menu').classList.add('hidden');
+    document.querySelector('#table').classList.remove('hidden');
+    persp=0; advance();
+    setInterval(function(){ if(game && game.phase==='gameover'){ game=fresh(); persp=0; advance(); } }, 3500);
+  }catch(e){ document.body.innerHTML='<pre style="color:#f66;padding:20px;white-space:pre-wrap">'+e.stack+'</pre>'; }
+});
+
+</script>
+</body>
+</html>

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>KOSMOBAGGER — Das Duell</title>
+<meta name="description" content="Maschinen kämpfen um Energiekristalle — Kartenduell gegen den Computer oder zu zweit." />
+<meta name="theme-color" content="#0b1022" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="icon" href="icons/favicon-64.png" />
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="KOSMOBAGGER" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div id="app">
+  <!-- Startmenue -->
+  <section id="menu" class="screen">
+    <div class="menu-box">
+      <h1>KOSMOBAGGER</h1>
+      <p class="sub">Das Duell — lokal spielbar</p>
+
+      <div class="opt">
+        <label>Gegner</label>
+        <div class="seg" data-opt="mode">
+          <button data-val="ai" class="on">Gegen Computer</button>
+          <button data-val="hot">2 Spieler (Hotseat)</button>
+        </div>
+      </div>
+
+      <div class="opt">
+        <label>Module</label>
+        <div class="seg" data-opt="modules">
+          <button data-val="1">Modul 1 (Treibstoff)</button>
+          <button data-val="2" class="on">Modul 2 (+ Batterien)</button>
+        </div>
+      </div>
+
+      <div class="opt">
+        <label>Kristalle zum Sieg</label>
+        <div class="seg" data-opt="target">
+          <button data-val="3">3 (kurz)</button>
+          <button data-val="5" class="on">5 (normal)</button>
+        </div>
+      </div>
+
+      <div class="opt" id="opt-ai">
+        <label>Stärke des Computers</label>
+        <div class="seg" data-opt="ai">
+          <button data-val="0.6">Leicht</button>
+          <button data-val="0.85" class="on">Mittel</button>
+          <button data-val="0.97">Stark</button>
+        </div>
+      </div>
+
+      <button id="startBtn" class="big">Spiel starten</button>
+      <p class="hint">Grosse Maschine bleibt stehen und kämpft jede Runde weiter — aber sie zu bauen kostet Sparen. Wer zuerst genug Kristalle sammelt, gewinnt.</p>
+    </div>
+  </section>
+
+  <!-- Spieltisch -->
+  <section id="table" class="screen hidden">
+    <div id="oppArea" class="side opp">
+      <div class="pinfo">
+        <span class="pname"></span>
+        <span class="res tank" title="Tank">⛽ <b class="fuel">0</b></span>
+        <span class="res batt" title="Batterien">🔋 <b class="bat">0</b></span>
+        <span class="crystals"></span>
+      </div>
+      <div class="handrow opphand"></div>
+    </div>
+
+    <div id="battle">
+      <div class="slot-wrap opp-slot"><div class="slotlabel">Gegner</div><div class="slot" id="oppSlot"></div></div>
+      <div id="centerMsg"></div>
+      <div class="slot-wrap me-slot"><div class="slotlabel">Du</div><div class="slot" id="meSlot"></div></div>
+    </div>
+
+    <div id="meArea" class="side me">
+      <div class="pinfo">
+        <span class="pname"></span>
+        <span class="res tank">⛽ <b class="fuel">0</b><i class="pips fuelpips"></i></span>
+        <span class="res batt">🔋 <b class="bat">0</b><i class="pips batpips"></i></span>
+        <span class="crystals"></span>
+      </div>
+      <div class="handrow mehand"></div>
+    </div>
+
+    <div id="actionbar"></div>
+    <button id="menuBtn" title="Zurück zum Menü">☰</button>
+  </section>
+
+  <!-- Overlay (Aufdecken / Weitergeben / Sieg / Aktionen) -->
+  <div id="overlay" class="hidden"><div id="overlay-inner"></div></div>
+</div>
+
+<script type="module" src="app.js"></script>
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+  }
+</script>
+</body>
+</html>
