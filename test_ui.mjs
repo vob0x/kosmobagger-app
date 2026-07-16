@@ -6,7 +6,7 @@ function node(){
     getBoundingClientRect(){return {left:0,top:0,width:0,height:0,right:0,bottom:0};}, offsetWidth:0,
     classList:{add(){},remove(){},toggle(){},contains(){return false}},
     addEventListener(t,f){this._h[t]=f;},
-    appendChild(c){this.children.push(c);return c;},
+    appendChild(c){this.children.push(c);return c;}, insertBefore(c,ref){this.children.unshift(c);return c;}, insertAdjacentHTML(){},
     closest(){return node();}, querySelector(){return node();}, querySelectorAll(){return [];},
     setAttribute(){},getAttribute(){return null;}, focus(){},remove(){},
     set innerHTML(v){this._html=v;}, get innerHTML(){return this._html||"";},
@@ -24,7 +24,7 @@ process.on("unhandledRejection", e=>errors.push("REJECT: "+(e&&e.stack||e)));
 
 // ---- Bundle laden + Testhaken ----
 let html=fs.readFileSync("KOSMOBAGGER.html","utf8");
-let js=html.match(/<script>([\s\S]*)<\/script>/)[1];
+let js=html.match(/<script>([\s\S]*?)<\/script>/)[1];
 js += `
 globalThis.__startAI=function(){ cfg.mode='ai'; game=new Game({modules:2,target:5,deckDoubled:true,boosters:4,tows:2,names:['A','B'],ai:[true,true],aiLevel:0.9}); persp=0; advance(); };
 globalThis.__startHuman=function(){ cfg.mode='ai'; game=new Game({modules:2,target:5,deckDoubled:true,boosters:4,tows:2,names:['Du','C'],ai:[false,true],aiLevel:0.9}); persp=0; advance(); };

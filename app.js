@@ -1,4 +1,4 @@
-import { Game } from "./engine.js";
+import { Game, TANK_MAX, BAT_MAX } from "./engine.js";
 import { CARD_BACK } from "./cards.js";
 
 const $ = s => document.querySelector(s);
@@ -156,6 +156,26 @@ muteBtn.id = "muteBtn"; muteBtn.textContent = "🔊"; muteBtn.title = "Ton an/au
 muteBtn.addEventListener("click", () => { const m = Snd.toggle(); muteBtn.textContent = m ? "🔇" : "🔊"; });
 $("#table").appendChild(muteBtn);
 FX.start();   // Sternenfeld auch hinter dem Menue
+
+// Menue-Logo (Emblem aus den App-Icons)
+(() => {
+  const box = document.querySelector(".menu-box"), h1 = box && box.querySelector("h1");
+  if (box && h1 && !$("#menuLogo")) { const im = document.createElement("img"); im.id = "menuLogo"; im.src = "icons/icon-192.png"; im.alt = ""; box.insertBefore(im, h1); }
+})();
+
+// Optionale custom Grafiken: erscheinen automatisch, sobald die Dateien im assets/ liegen.
+function tryImg(url, apply) {
+  if (typeof Image === "undefined") return;
+  const im = new Image(); im.onload = () => apply(url); im.onerror = () => {}; im.src = url;
+}
+tryImg("assets/arena.png", u => {
+  let a = $("#arena"); if (!a) { a = document.createElement("div"); a.id = "arena"; document.body.insertBefore(a, $("#app")); }
+  a.style.backgroundImage = `url('${u}')`;
+});
+tryImg("assets/hero.png", u => {
+  const box = document.querySelector(".menu-box");
+  if (box && !$("#menuHero")) { const hero = document.createElement("div"); hero.id = "menuHero"; hero.style.backgroundImage = `url('${u}')`; box.insertBefore(hero, box.firstChild); }
+});
 $("#menuBtn").addEventListener("click", () => { $("#table").classList.add("hidden"); $("#menu").classList.remove("hidden"); hideOverlay(); });
 
 function startGame() {
@@ -170,8 +190,13 @@ function startGame() {
   $("#menu").classList.add("hidden");
   $("#table").classList.remove("hidden");
   FX.start();
+  ["oppDeck", "meDeck"].forEach(id => { if (!$("#" + id)) { const d = document.createElement("div"); d.id = id; d.className = "deckpile"; $("#battle").appendChild(d); } });
   persp = 0;
   advance();
+}
+
+function deckStack(n) {
+  return `<div class="dcard" style="background-image:url('${CARD_BACK}')"></div><b>${n}</b>`;
 }
 
 // ---------- Overlay-Helfer ----------
@@ -199,18 +224,11 @@ function renderBoard() {
   meA.querySelector(".pname").textContent = me.name;
   opA.querySelector(".pname").textContent = op.name;
   for (const [area, p] of [[meA, me], [opA, op]]) {
-    area.querySelector(".fuel").textContent = p.fuel;
-    area.querySelector(".bat").textContent = p.bat;
-    let g = "";
-    for (let i = 0; i < game.opts.target; i++) g += `<i class="cg${i < p.crystals ? " on" : ""}"></i>`;
-    area.querySelector(".crystals").innerHTML = g + `<b>${p.crystals}/${game.opts.target}</b>`;
+    area.querySelector(".tank").innerHTML = gauge("assets/kanister.png", p.fuel, TANK_MAX);
+    area.querySelector(".batt").innerHTML = gauge("assets/batterie.png", p.bat, BAT_MAX);
+    area.querySelector(".crystals").innerHTML = gauge("assets/kristall.png", p.crystals, game.opts.target, true) + `<b>${p.crystals}/${game.opts.target}</b>`;
+    area.querySelector(".batt").style.display = game.opts.modules >= 2 ? "" : "none";
   }
-  // Pips (nur meine Seite)
-  pips(meA.querySelector(".fuelpips"), me.fuel, 3, "f");
-  pips(meA.querySelector(".batpips"), me.bat, 2, "b");
-  // Batteriefelder ausblenden in Modul 1
-  meA.querySelector(".batt").style.display = opA.querySelector(".batt").style.display =
-    game.opts.modules >= 2 ? "" : "none";
 
   // Gegnerhand (Rueckseiten)
   const oh = opA.querySelector(".opphand"); oh.innerHTML = "";
@@ -219,9 +237,17 @@ function renderBoard() {
   // Slots (stehende Maschinen)
   slotShow($("#oppSlot"), op.slot, op.slotTurbo);
   slotShow($("#meSlot"), me.slot, me.slotTurbo);
+  if ($("#meDeck")) $("#meDeck").innerHTML = deckStack(me.deck.length);
+  if ($("#oppDeck")) $("#oppDeck").innerHTML = deckStack(op.deck.length);
 
   // Meine Hand
   renderHand();
+}
+
+function gauge(icon, filled, total, gem) {
+  let s = "";
+  for (let i = 0; i < total; i++) s += `<i class="cell${i < filled ? " on" : ""}${gem ? " gem" : ""}"><img src="${icon}" alt=""></i>`;
+  return s;
 }
 
 function pips(box, val, max, cls) {

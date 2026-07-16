@@ -201,6 +201,46 @@ body{background:radial-gradient(1200px 820px at 50% -18%, #1b2648 0%, #0b1022 55
 #overlay-inner{background:linear-gradient(180deg,rgba(26,36,66,.96),rgba(16,22,44,.96));border-color:rgba(120,150,220,.3);box-shadow:0 30px 90px rgba(0,0,0,.7),0 0 0 1px rgba(255,255,255,.05)}
 #menuBtn,#muteBtn{background:linear-gradient(180deg,rgba(20,28,52,.9),rgba(12,18,36,.9));border-color:rgba(120,150,220,.3)}
 
+/* ===== v3: Spielgrafiken im UI ===== */
+#bg{z-index:-2}
+#arena{position:fixed;inset:0;z-index:-1;background-size:cover;background-position:center;opacity:.55;filter:saturate(.9) brightness(.7)}
+#arena::after{content:"";position:absolute;inset:0;background:radial-gradient(1200px 820px at 50% 42%,transparent,rgba(7,11,22,.68))}
+
+/* HUD aus Icons: Tank / Batterie / Kristalle */
+.res{padding:4px 10px;gap:5px}
+.res .cell{width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center}
+.res .cell img{width:100%;height:100%;object-fit:contain;filter:grayscale(1) brightness(.45);opacity:.42;transition:.2s}
+.res .cell.on img{filter:drop-shadow(0 0 5px rgba(255,200,80,.75));opacity:1}
+.res.batt .cell.on img{filter:drop-shadow(0 0 5px rgba(90,230,140,.8))}
+.crystals{gap:4px}
+.crystals .cell{width:22px;height:22px;display:inline-flex}
+.crystals .cell img{width:100%;height:100%;object-fit:contain;filter:grayscale(1) brightness(.5);opacity:.38;transition:.2s}
+.crystals .cell.on img{filter:drop-shadow(0 0 9px rgba(120,225,255,.95));opacity:1}
+.crystals b{margin-left:8px}
+.opp .res .cell,.opp .res .cell img{width:18px;height:18px}
+.opp .crystals .cell,.opp .crystals .cell img{width:18px;height:18px}
+
+/* Deck-Stapel */
+.deckpile{position:absolute;display:flex;flex-direction:column;align-items:center;gap:3px;z-index:2}
+#oppDeck{top:8px;left:14px}
+#meDeck{bottom:8px;left:14px}
+.deckpile .dcard{width:46px;height:64px;border-radius:7px;background-size:cover;background-position:center;
+  box-shadow:0 2px 0 #0b1730,0 4px 0 #0a1428,0 9px 15px rgba(0,0,0,.6),0 0 0 1px rgba(120,150,220,.28)}
+.deckpile b{font-size:12px;color:var(--dim)}
+
+/* Slots als Bau-Pads */
+.slot{position:relative;border:2px solid rgba(120,150,220,.3);border-top-color:rgba(150,180,240,.42);
+  background:linear-gradient(180deg,rgba(16,24,48,.5),rgba(8,14,32,.5))}
+.slot::before{content:"";position:absolute;inset:-9px;border-radius:20px;z-index:-1;
+  background:radial-gradient(130px 66px at 50% 100%,rgba(90,130,230,.2),transparent 70%)}
+
+/* Menue-Logo + optionaler Hero */
+#menuLogo{display:block;width:100px;height:100px;margin:0 auto 8px;border-radius:22px;
+  filter:drop-shadow(0 10px 24px rgba(80,120,255,.55))}
+.menu-box h1{margin-top:0}
+#menuHero{height:140px;margin:-6px -8px 14px;border-radius:14px;background-size:cover;background-position:center;
+  box-shadow:inset 0 -46px 64px -22px rgba(16,22,44,.98),0 0 0 1px rgba(120,150,220,.22)}
+
 </style>
 </head>
 <body>
@@ -970,6 +1010,26 @@ muteBtn.id = "muteBtn"; muteBtn.textContent = "🔊"; muteBtn.title = "Ton an/au
 muteBtn.addEventListener("click", () => { const m = Snd.toggle(); muteBtn.textContent = m ? "🔇" : "🔊"; });
 $("#table").appendChild(muteBtn);
 FX.start();   // Sternenfeld auch hinter dem Menue
+
+// Menue-Logo (Emblem aus den App-Icons)
+(() => {
+  const box = document.querySelector(".menu-box"), h1 = box && box.querySelector("h1");
+  if (box && h1 && !$("#menuLogo")) { const im = document.createElement("img"); im.id = "menuLogo"; im.src = "icons/icon-192.png"; im.alt = ""; box.insertBefore(im, h1); }
+})();
+
+// Optionale custom Grafiken: erscheinen automatisch, sobald die Dateien im assets/ liegen.
+function tryImg(url, apply) {
+  if (typeof Image === "undefined") return;
+  const im = new Image(); im.onload = () => apply(url); im.onerror = () => {}; im.src = url;
+}
+tryImg("assets/arena.png", u => {
+  let a = $("#arena"); if (!a) { a = document.createElement("div"); a.id = "arena"; document.body.insertBefore(a, $("#app")); }
+  a.style.backgroundImage = `url('${u}')`;
+});
+tryImg("assets/hero.png", u => {
+  const box = document.querySelector(".menu-box");
+  if (box && !$("#menuHero")) { const hero = document.createElement("div"); hero.id = "menuHero"; hero.style.backgroundImage = `url('${u}')`; box.insertBefore(hero, box.firstChild); }
+});
 $("#menuBtn").addEventListener("click", () => { $("#table").classList.add("hidden"); $("#menu").classList.remove("hidden"); hideOverlay(); });
 
 function startGame() {
@@ -984,8 +1044,13 @@ function startGame() {
   $("#menu").classList.add("hidden");
   $("#table").classList.remove("hidden");
   FX.start();
+  ["oppDeck", "meDeck"].forEach(id => { if (!$("#" + id)) { const d = document.createElement("div"); d.id = id; d.className = "deckpile"; $("#battle").appendChild(d); } });
   persp = 0;
   advance();
+}
+
+function deckStack(n) {
+  return `<div class="dcard" style="background-image:url('${CARD_BACK}')"></div><b>${n}</b>`;
 }
 
 // ---------- Overlay-Helfer ----------
@@ -1013,18 +1078,11 @@ function renderBoard() {
   meA.querySelector(".pname").textContent = me.name;
   opA.querySelector(".pname").textContent = op.name;
   for (const [area, p] of [[meA, me], [opA, op]]) {
-    area.querySelector(".fuel").textContent = p.fuel;
-    area.querySelector(".bat").textContent = p.bat;
-    let g = "";
-    for (let i = 0; i < game.opts.target; i++) g += `<i class="cg${i < p.crystals ? " on" : ""}"></i>`;
-    area.querySelector(".crystals").innerHTML = g + `<b>${p.crystals}/${game.opts.target}</b>`;
+    area.querySelector(".tank").innerHTML = gauge("assets/kanister.png", p.fuel, TANK_MAX);
+    area.querySelector(".batt").innerHTML = gauge("assets/batterie.png", p.bat, BAT_MAX);
+    area.querySelector(".crystals").innerHTML = gauge("assets/kristall.png", p.crystals, game.opts.target, true) + `<b>${p.crystals}/${game.opts.target}</b>`;
+    area.querySelector(".batt").style.display = game.opts.modules >= 2 ? "" : "none";
   }
-  // Pips (nur meine Seite)
-  pips(meA.querySelector(".fuelpips"), me.fuel, 3, "f");
-  pips(meA.querySelector(".batpips"), me.bat, 2, "b");
-  // Batteriefelder ausblenden in Modul 1
-  meA.querySelector(".batt").style.display = opA.querySelector(".batt").style.display =
-    game.opts.modules >= 2 ? "" : "none";
 
   // Gegnerhand (Rueckseiten)
   const oh = opA.querySelector(".opphand"); oh.innerHTML = "";
@@ -1033,9 +1091,17 @@ function renderBoard() {
   // Slots (stehende Maschinen)
   slotShow($("#oppSlot"), op.slot, op.slotTurbo);
   slotShow($("#meSlot"), me.slot, me.slotTurbo);
+  if ($("#meDeck")) $("#meDeck").innerHTML = deckStack(me.deck.length);
+  if ($("#oppDeck")) $("#oppDeck").innerHTML = deckStack(op.deck.length);
 
   // Meine Hand
   renderHand();
+}
+
+function gauge(icon, filled, total, gem) {
+  let s = "";
+  for (let i = 0; i < total; i++) s += `<i class="cell${i < filled ? " on" : ""}${gem ? " gem" : ""}"><img src="${icon}" alt=""></i>`;
+  return s;
 }
 
 function pips(box, val, max, cls) {

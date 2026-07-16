@@ -1,5 +1,7 @@
-// KOSMOBAGGER PWA Service-Worker — Offline-Cache. Cache-Version bei jedem Update erhoehen.
-const CACHE = "kosmobagger-v1";
+// KOSMOBAGGER PWA Service-Worker.
+// Strategie: App-Shell (HTML/JS/CSS/Manifest) NETWORK-FIRST (online immer aktuell),
+// Bilder CACHE-FIRST (schnell, offline). Bei jedem Release CACHE-Version erhoehen.
+const CACHE = "kosmobagger-v2";
 const ASSETS = [
   "./",
   "index.html",
@@ -40,7 +42,10 @@ const ASSETS = [
   "cards/TRK-3_Tank-Laster.png",
   "cards/TRK-4_Schwerlast-Truck.png",
   "cards/TRK-5_Monster-Truck.png",
-  "cards/TRK-6_Riesen-Sattelschlepper.png"
+  "cards/TRK-6_Riesen-Sattelschlepper.png",
+  "assets/batterie.png",
+  "assets/kanister.png",
+  "assets/kristall.png"
 ];
 
 self.addEventListener("install", e => {
@@ -52,11 +57,14 @@ self.addEventListener("activate", e => {
 self.addEventListener("fetch", e => {
   const req = e.request;
   if (req.method !== "GET") return;
-  e.respondWith(
-    caches.match(req).then(hit => hit || fetch(req).then(res => {
-      const copy = res.clone();
-      caches.open(CACHE).then(c => c.put(req, copy)).catch(() => {});
-      return res;
-    }).catch(() => req.mode === "navigate" ? caches.match("index.html") : undefined))
-  );
+  const isImg = /\.(png|jpe?g|webp|svg|gif|woff2?)$/i.test(new URL(req.url).pathname);
+  if (isImg) {
+    e.respondWith(caches.match(req).then(hit => hit || fetch(req).then(res => {
+      const c = res.clone(); caches.open(CACHE).then(ca => ca.put(req, c)).catch(() => {}); return res;
+    })));
+  } else {
+    e.respondWith(fetch(req).then(res => {
+      const c = res.clone(); caches.open(CACHE).then(ca => ca.put(req, c)).catch(() => {}); return res;
+    }).catch(() => caches.match(req).then(hit => hit || (req.mode === "navigate" ? caches.match("index.html") : undefined))));
+  }
 });
