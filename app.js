@@ -150,6 +150,23 @@ function flashScreen() {
 }
 function centerOf(sel) { const r = ($(sel) || {}).getBoundingClientRect ? $(sel).getBoundingClientRect() : null; return r ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : { x: innerWidth / 2, y: innerHeight / 2 }; }
 
+// Animationen nur im echten Browser (headless: kein requestAnimationFrame -> No-op)
+function fxOn() { return typeof document !== "undefined" && typeof requestAnimationFrame === "function"; }
+function floatText(x, y, text, color, big) {
+  if (!fxOn() || x == null) return;
+  const d = document.createElement("div"); d.className = "floattext" + (big ? " big" : "");
+  d.textContent = text; d.style.left = x + "px"; d.style.top = y + "px"; if (color) d.style.color = color;
+  document.body.appendChild(d); setTimeout(() => d.remove(), 1120);
+}
+function flyToken(img, toSel, from) {
+  if (!fxOn()) return;
+  const to = centerOf(toSel), s = from || { x: innerWidth / 2, y: innerHeight / 2 };
+  const im = document.createElement("img"); im.className = "flytoken"; im.src = img;
+  im.style.left = s.x + "px"; im.style.top = s.y + "px"; document.body.appendChild(im);
+  requestAnimationFrame(() => { im.style.left = to.x + "px"; im.style.top = to.y + "px"; im.style.transform = "translate(-50%,-50%) scale(.55)"; im.style.opacity = "0"; });
+  setTimeout(() => im.remove(), 580);
+}
+
 const cfg = { mode: "ai", modules: 2, target: 5, ai: 0.85 };
 let game = null;
 let persp = 0;          // aus wessen Sicht der Tisch gerade gezeigt wird
@@ -287,6 +304,7 @@ function slotShow(el, card, turbo) {
 }
 
 let selUid = null;
+let lastHandSig = "";
 
 // Tippen -> Aktionsmenue; Ziehen auf den eigenen Bauplatz -> direkt bauen/ausspielen.
 function attachPlay(el, card) {
@@ -322,12 +340,15 @@ function renderHand() {
   const canAct = acting && game.needsCommit(persp) && !game.needsIncome(persp);
   const affordableBuild = canAct && !me.slot;
   const n = me.hand.length, mid = (n - 1) / 2;
+  const sig = persp + ":" + me.hand.map(c => c.uid).join(",");
+  const dealNow = sig !== lastHandSig; lastHandSig = sig;
   me.hand.forEach((card, idx) => {
     const wrap = document.createElement("div"); wrap.className = "handcard";
     const rot = (idx - mid) * 3.4, lift = Math.abs(idx - mid) * 7;
     wrap.style.setProperty("--rot", rot + "deg");
     wrap.style.transform = `rotate(${rot}deg) translateY(${lift}px)`;
     const el = cardEl(card);
+    if (dealNow) { el.classList.add("deal"); el.style.setProperty("--i", idx); }
     const playableMachine = card.kraft && card.cost <= me.fuel && affordableBuild;
     const playableSpecial = (card.kind === "booster" || card.kind === "tow") && affordableBuild;
     if (canAct && (playableMachine || playableSpecial)) {
@@ -419,7 +440,11 @@ function promptIncome(human) {
       <button class="big" style="max-width:170px" id="inFuel">⛽ Kanister</button>
       <button class="big" style="max-width:170px;background:linear-gradient(180deg,#5be08a,#28a35a)" id="inBat">🔋 Batterie</button>
     </div>`);
-  const pick = k => { game.setIncome(human.idx, k); hideOverlay(); renderBoard(); promptCommit(human); };
+  const pick = k => {
+    game.setIncome(human.idx, k); hideOverlay(); renderBoard();
+    flyToken(k === "bat" ? "assets/batterie.png" : "assets/kanister.png", k === "bat" ? "#meArea .batt" : "#meArea .tank", centerOf("#centerMsg"));
+    promptCommit(human);
+  };
   $("#inFuel").onclick = () => pick("fuel");
   $("#inBat").onclick = () => pick("bat");
 }
@@ -445,12 +470,13 @@ function doCommit(action) {
   if (!acting) return;
   acting = false;
   if (["build", "booster", "tow", "repair"].includes(action.type)) Snd.place(); else Snd.click();
+  if (action.type === "booster") { const bc = game.handCard(game.players[persp], action.uid); if (bc) flyToken(bc.gives === "bat" ? "assets/batterie.png" : "assets/kanister.png", bc.gives === "bat" ? "#meArea .batt" : "#meArea .tank", centerOf("#meSlot")); }
   game.commit(persp, action);
   clearActions(); selUid = null;
   advance();
 }
 
-function flash(msg) { $("#centerMsg").textContent = msg; }
+function flash(msg) { const el = $("#centerMsg"); if (!el) return; el.textContent = msg; el.classList.remove("pop"); void el.offsetWidth; el.classList.add("pop"); }
 
 function pulseCrystals(i) {
   const area = (i === persp) ? $("#meArea") : $("#oppArea");
@@ -490,18 +516,27 @@ async function revealAndResolve() {
   if (clash) {
     Snd.clash(); shake(clash.winner === -1 ? 1.3 : 1); flashScreen();
     FX.ring(mid.x, mid.y, "255,207,63"); FX.burst(mid.x, mid.y, "255,180,60", 34, { spread: 11 });
-    if (clash.winner === -1) { markSlot("#meSlot", "lose"); markSlot("#oppSlot", "lose"); FX.burst(mid.x, mid.y, "255,90,90", 30); flash(`Gleichstand ${clash.ea} : ${clash.eb} — beide in die Garage`); }
+    const meP = centerOf("#meSlot"), opP = centerOf("#oppSlot");
+    if (clash.winner === -1) {
+      markSlot("#meSlot", "lose"); markSlot("#oppSlot", "lose"); FX.burst(mid.x, mid.y, "255,90,90", 30);
+      floatText(meP.x, meP.y - 66, clash.ea, "#ffd479", true); floatText(opP.x, opP.y - 66, clash.eb, "#ffd479", true);
+      flash(`Gleichstand ${clash.ea} : ${clash.eb} — beide in die Garage`);
+    }
     else {
       const meWon = clash.winner === 0;
       markSlot(meWon ? "#meSlot" : "#oppSlot", "win");
       markSlot(meWon ? "#oppSlot" : "#meSlot", "lose");
       const lc = centerOf(meWon ? "#oppSlot" : "#meSlot"); FX.burst(lc.x, lc.y, "160,170,190", 30, { spread: 7 });
+      floatText(meP.x, meP.y - 66, clash.ea, meWon ? "#7cfc9a" : "#ff8a8a", true);
+      floatText(opP.x, opP.y - 66, clash.eb, meWon ? "#ff8a8a" : "#7cfc9a", true);
       flash(`${clash.ea} : ${clash.eb} — ${meWon ? game.players[0].name : game.players[1].name} gewinnt`);
     }
   } else if (score) {
     Snd.score();
     const sc = centerOf(score.i === persp ? "#meSlot" : "#oppSlot");
     FX.sparkle(sc.x, sc.y, "120,225,255", 26); FX.ring(sc.x, sc.y, "87,208,232", 8);
+    floatText(sc.x, sc.y - 60, "+1 ◆", "#8cebff", true);
+    flyToken("assets/kristall.png", score.i === 0 ? "#meArea .crystals" : "#oppArea .crystals", sc);
     flash(`${game.players[score.i].name} kommt durch — ◆ +1 Kristall`);
     markSlot(score.i === 0 ? "#meSlot" : "#oppSlot", "win");
     pulseCrystals(score.i);
@@ -516,7 +551,7 @@ async function revealAndResolve() {
 function showSlotReveal(el, d) {
   el.innerHTML = ""; el.classList.remove("empty");
   if (d.card) {
-    const c = cardEl(d.card); c.classList.add("reveal");
+    const c = cardEl(d.card); c.classList.add("reveal"); c.classList.add("flipin");
     if (d.turbo) { const t = document.createElement("div"); t.className = "turbobadge"; t.textContent = "+2"; c.appendChild(t); }
     el.appendChild(c);
     const r = el.getBoundingClientRect(); FX.ring(r.left + r.width / 2, r.top + r.height / 2, "150,190,255", 16);

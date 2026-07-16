@@ -247,3 +247,28 @@ body{background:radial-gradient(1200px 820px at 50% -18%, #1b2648 0%, #0b1022 55
 .hand .handcard.play:hover .card{filter:brightness(1.06)}
 #menuHero{height:140px;margin:-6px -8px 14px;border-radius:14px;background-size:cover;background-position:center;
   box-shadow:inset 0 -46px 64px -22px rgba(16,22,44,.98),0 0 0 1px rgba(120,150,220,.22)}
+
+/* ===== v5: mehr Arena-Feel ===== */
+/* 3D-Flip beim Aufdecken (Perspektive am Slot) */
+.slot{perspective:900px}
+.slot .card.flipin{animation:flipin .5s cubic-bezier(.2,.85,.25,1)}
+@keyframes flipin{0%{transform:rotateY(90deg) scale(.9);opacity:.2}55%{opacity:1}100%{transform:none;opacity:1}}
+
+/* Karten ins Blatt austeilen (nur wenn sich das Blatt aendert) */
+.card.deal{animation:dealin .34s cubic-bezier(.2,.9,.25,1) both;animation-delay:calc(var(--i,0)*55ms)}
+@keyframes dealin{0%{transform:translateY(74px) scale(.6);opacity:0}100%{transform:none;opacity:1}}
+
+/* Schwebende Kampf-Zahlen / Text */
+.floattext{position:fixed;transform:translate(-50%,-50%);font-weight:900;font-size:26px;z-index:60;pointer-events:none;
+  text-shadow:0 2px 8px rgba(0,0,0,.85),0 0 16px rgba(0,0,0,.55);animation:floatup 1.05s ease forwards}
+.floattext.big{font-size:42px}
+@keyframes floatup{0%{opacity:0;transform:translate(-50%,-40%) scale(.4)}18%{opacity:1;transform:translate(-50%,-58%) scale(1.18)}32%{transform:translate(-50%,-60%) scale(1)}100%{opacity:0;transform:translate(-50%,-150%) scale(1)}}
+
+/* Fliegendes Ressourcen-/Kristall-Icon zum HUD */
+.flytoken{position:fixed;width:38px;height:38px;transform:translate(-50%,-50%);z-index:58;pointer-events:none;
+  transition:left .52s cubic-bezier(.5,-0.15,.3,1.25),top .52s cubic-bezier(.5,-0.15,.3,1.25),transform .52s,opacity .52s;
+  filter:drop-shadow(0 4px 12px rgba(0,0,0,.6)) drop-shadow(0 0 10px rgba(120,200,255,.75))}
+
+/* Banner-Pop bei neuer Meldung */
+#centerMsg.pop{animation:msgpop .4s cubic-bezier(.2,1.5,.4,1)}
+@keyframes msgpop{0%{transform:scale(.7);opacity:.25}60%{transform:scale(1.08)}100%{transform:scale(1);opacity:1}}

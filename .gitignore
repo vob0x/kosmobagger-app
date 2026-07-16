@@ -1,3 +1,8 @@
 .DS_Store
 node_modules/
 *.log
+
+# Dev-/Audition-Hilfen (nicht auf GitHub Pages noetig)
+_sfx_audition/
+sfx_test.html
+assets/sfx/_synth_backup/
