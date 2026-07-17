@@ -264,7 +264,7 @@ body{background:radial-gradient(1200px 820px at 50% -18%, #1b2648 0%, #0b1022 55
   -webkit-text-stroke:3px rgba(6,10,22,.92);paint-order:stroke fill;
   text-shadow:0 3px 12px rgba(0,0,0,.9),0 0 24px rgba(0,0,0,.65);
   animation:floatup 2.2s cubic-bezier(.2,.9,.3,1) forwards}
-.floattext.big{font-size:56px;-webkit-text-stroke-width:4px}
+.floattext.xl{font-size:56px;-webkit-text-stroke-width:4px}
 @keyframes floatup{
   0%{opacity:0;transform:translate(-50%,-40%) scale(.4)}
   10%{opacity:1;transform:translate(-50%,-58%) scale(1.25)}

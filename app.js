@@ -154,7 +154,7 @@ function centerOf(sel) { const r = ($(sel) || {}).getBoundingClientRect ? $(sel)
 function fxOn() { return typeof document !== "undefined" && typeof requestAnimationFrame === "function"; }
 function floatText(x, y, text, color, big) {
   if (!fxOn() || x == null) return;
-  const d = document.createElement("div"); d.className = "floattext" + (big ? " big" : "");
+  const d = document.createElement("div"); d.className = "floattext" + (big ? " xl" : "");   // NICHT "big" — das ist die Button-Klasse!
   d.textContent = text; d.style.left = x + "px"; d.style.top = y + "px"; if (color) d.style.color = color;
   document.body.appendChild(d); setTimeout(() => d.remove(), 2300);
 }
@@ -653,7 +653,7 @@ async function revealAndResolve() {
     const meP = centerOf("#meSlot"), opP = centerOf("#oppSlot");
     if (clash.winner === -1) {
       markSlot("#meSlot", "lose"); markSlot("#oppSlot", "lose"); FX.burst(mid.x, mid.y, "255,90,90", 30);
-      floatText(meP.x, meP.y - 66, clash.ea, "#ffd479", true); floatText(opP.x, opP.y - 66, clash.eb, "#ffd479", true);
+      floatText(meP.x + 88, meP.y, clash.ea, "#ffd479", true); floatText(opP.x + 88, opP.y, clash.eb, "#ffd479", true);
       flash(`Gleichstand ${clash.ea} : ${clash.eb} — beide in die Garage`);
     }
     else {
@@ -661,8 +661,8 @@ async function revealAndResolve() {
       markSlot(meWon ? "#meSlot" : "#oppSlot", "win");
       markSlot(meWon ? "#oppSlot" : "#meSlot", "lose");
       const lc = centerOf(meWon ? "#oppSlot" : "#meSlot"); FX.burst(lc.x, lc.y, "160,170,190", 30, { spread: 7 });
-      floatText(meP.x, meP.y - 66, clash.ea, meWon ? "#7cfc9a" : "#ff8a8a", true);
-      floatText(opP.x, opP.y - 66, clash.eb, meWon ? "#ff8a8a" : "#7cfc9a", true);
+      floatText(meP.x + 88, meP.y, clash.ea, meWon ? "#7cfc9a" : "#ff8a8a", true);
+      floatText(opP.x + 88, opP.y, clash.eb, meWon ? "#ff8a8a" : "#7cfc9a", true);
       const wn = meWon ? game.players[0].name : game.players[1].name;
       flash(`${clash.ea} : ${clash.eb} — ${wn} ${wn === "Du" ? "gewinnst" : "gewinnt"}`);
     }
@@ -685,7 +685,7 @@ async function revealAndResolve() {
     await sleep(380);
     Snd.score();
     FX.sparkle(sc.x, sc.y, "120,225,255", 26); FX.ring(sc.x, sc.y, "87,208,232", 8);
-    floatText(sc.x, sc.y - 60, "+1 ◆", "#8cebff", true);
+    floatText(sc.x + 92, sc.y, "+1 ◆", "#8cebff", true);
     flyToken("assets/kristall.png", meScored ? "#meArea .crystals" : "#oppArea .crystals", gap);
     flash(`${game.players[score.i].name} kommt durch — ◆ +1 Kristall`);
     pulseCrystals(score.i);
