@@ -270,8 +270,8 @@ function renderBoard() {
   for (let i = 0; i < op.hand.length; i++) oh.appendChild(cardEl(null, { back: true }));
 
   // Slots (stehende Maschinen)
-  slotShow($("#oppSlot"), op.slot, op.slotTurbo);
-  slotShow($("#meSlot"), me.slot, me.slotTurbo);
+  slotRenderPre($("#oppSlot"), op);
+  slotRenderPre($("#meSlot"), me);
   if ($("#meDeck")) $("#meDeck").innerHTML = deckStack(me.deck.length);
   if ($("#oppDeck")) $("#oppDeck").innerHTML = deckStack(op.deck.length);
 
@@ -292,6 +292,18 @@ function pips(box, val, max, cls) {
     if (i < val) s.className = cls;
     box.appendChild(s);
   }
+}
+
+// Vor dem Aufdecken: stehende Maschine offen, neu gespielte Karte verdeckt (Rueckseite).
+function slotRenderPre(el, p) {
+  if (p.slot && (!p.pending || p.pending.type === "none")) { slotShow(el, p.slot, p.slotTurbo); return; }
+  const t = p.pending && p.pending.type;
+  if (t === "build" || t === "booster" || t === "tow") {
+    el.innerHTML = ""; el.classList.remove("empty");
+    const c = cardEl(null, { back: true }); c.classList.add("pending");
+    el.appendChild(c); return;
+  }
+  slotShow(el, p.slot, p.slotTurbo);
 }
 
 function slotShow(el, card, turbo) {
@@ -435,7 +447,13 @@ function startHumanTurn(human) {
 
 function promptIncome(human) {
   clearActions();
-  showOverlay(`<h2>Einkommen</h2><p>Nimm eines pro Runde:</p>
+  const m2 = game.opts.modules >= 2;
+  const stat = `<div class="incstat">
+      <span title="Treibstoff"><img src="assets/kanister.png" alt="">${human.fuel}/${TANK_MAX}</span>
+      ${m2 ? `<span title="Batterie"><img src="assets/batterie.png" alt="">${human.bat}/${BAT_MAX}</span>` : ""}
+      <span title="Kristalle"><img src="assets/kristall.png" alt="">${human.crystals}/${game.opts.target}</span>
+    </div>`;
+  showOverlay(`<h2>Einkommen</h2><p>Nimm eines pro Runde — dein Vorrat:</p>${stat}
     <div style="display:flex;gap:12px;justify-content:center">
       <button class="big" style="max-width:170px" id="inFuel">⛽ Kanister</button>
       <button class="big" style="max-width:170px;background:linear-gradient(180deg,#5be08a,#28a35a)" id="inBat">🔋 Batterie</button>
@@ -454,7 +472,7 @@ function promptCommit(human) {
   const acts = game.legalActions(human.idx);
   if (acts.length === 1 && acts[0].type === "none") {   // Maschine kaempft weiter -> keine Wahl
     flash(`${human.name}: deine Maschine kämpft weiter`);
-    game.commit(human.idx, acts[0]); setTimeout(advance, 650); return;
+    game.commit(human.idx, acts[0]); setTimeout(advance, 1300); return;
   }
   baseActions();
   const kannBauen = acts.some(a => ["build", "booster", "tow", "repair"].includes(a.type));
@@ -487,24 +505,25 @@ function pulseCrystals(i) {
 // ---------- Aufdecken & Kampf ----------
 async function revealAndResolve() {
   acting = false; persp = 0; renderBoard();
+  await sleep(500);   // kurzer Atemzug, bevor der Countdown startet (Zielgruppe: langsamer)
   const A = game.players[0], B = game.players[1];
   const pre = [A.slot, B.slot];
   const disp = i => {
     const p = game.players[i], a = p.pending || { type: "pass" };
     if (a.type === "build") return { card: game.handCard(p, a.uid), turbo: a.turbo && p.bat > 0 };
     if (p.slot) return { card: p.slot, turbo: p.slotTurbo };
-    if (a.type === "tow") return { label: "🚛 Abschlepper" };
-    if (a.type === "booster") return { label: "🛢 Booster" };
+    if (a.type === "tow") return { card: game.handCard(p, a.uid), special: "🚛", label: "🚛 Abschlepper" };
+    if (a.type === "booster") return { card: game.handCard(p, a.uid), special: "🛢", label: "🛢 Booster" };
     if (a.type === "repair") return { label: "🔧 Reparieren" };
     return { label: "💤 Sparen" };
   };
   // 3 – 2 – 1 – Aufdecken (Gefuehl von "gleichzeitig")
-  for (const n of ["3", "2", "1"]) { flash(n); Snd.tick(); await sleep(360); }
+  for (const n of ["3", "2", "1"]) { flash(n); Snd.tick(); await sleep(680); }
   Snd.reveal();
   showSlotReveal($("#meSlot"), disp(0));
   showSlotReveal($("#oppSlot"), disp(1));
   flash("Aufdecken!");
-  await sleep(720);
+  await sleep(1300);
 
   const ev = game.resolve();     // mutiert Zustand; danach lesen wir die Events
   // Kampf-Animation
@@ -529,7 +548,8 @@ async function revealAndResolve() {
       const lc = centerOf(meWon ? "#oppSlot" : "#meSlot"); FX.burst(lc.x, lc.y, "160,170,190", 30, { spread: 7 });
       floatText(meP.x, meP.y - 66, clash.ea, meWon ? "#7cfc9a" : "#ff8a8a", true);
       floatText(opP.x, opP.y - 66, clash.eb, meWon ? "#ff8a8a" : "#7cfc9a", true);
-      flash(`${clash.ea} : ${clash.eb} — ${meWon ? game.players[0].name : game.players[1].name} gewinnt`);
+      const wn = meWon ? game.players[0].name : game.players[1].name;
+      flash(`${clash.ea} : ${clash.eb} — ${wn} ${wn === "Du" ? "gewinnst" : "gewinnt"}`);
     }
   } else if (score) {
     Snd.score();
@@ -544,22 +564,28 @@ async function revealAndResolve() {
     flash("Nichts passiert");
   }
   const win = ev.find(e => e.t === "win");
-  await sleep(win ? 700 : 1150);
+  await sleep(win ? 1500 : 2300);
   advance();
 }
 
 function showSlotReveal(el, d) {
-  el.innerHTML = ""; el.classList.remove("empty");
-  if (d.card) {
-    const c = cardEl(d.card); c.classList.add("reveal"); c.classList.add("flipin");
-    if (d.turbo) { const t = document.createElement("div"); t.className = "turbobadge"; t.textContent = "+2"; c.appendChild(t); }
-    el.appendChild(c);
-    const r = el.getBoundingClientRect(); FX.ring(r.left + r.width / 2, r.top + r.height / 2, "150,190,255", 16);
-  } else {
-    el.classList.add("empty");
-    const s = document.createElement("div"); s.style.cssText = "font-size:13px;color:#8aa;text-align:center;padding:6px";
-    s.textContent = d.label || ""; el.appendChild(s);
-  }
+  const back = el.querySelector(".card.back");   // liegt eine verdeckte Karte hier?
+  const build = flip => {
+    el.innerHTML = ""; el.classList.remove("empty");
+    if (d.card) {
+      const c = cardEl(d.card); c.classList.add("reveal"); if (flip) c.classList.add("flipin");
+      if (d.turbo) { const t = document.createElement("div"); t.className = "turbobadge"; t.textContent = "+2"; c.appendChild(t); }
+      if (d.special) { const s = document.createElement("div"); s.className = "specialbadge"; s.textContent = d.special; c.appendChild(s); }
+      el.appendChild(c);
+      const r = el.getBoundingClientRect(); FX.ring(r.left + r.width / 2, r.top + r.height / 2, "150,190,255", 16);
+    } else {
+      el.classList.add("empty");
+      const s = document.createElement("div"); s.style.cssText = "font-size:13px;color:#8aa;text-align:center;padding:6px";
+      s.textContent = d.label || ""; el.appendChild(s);
+    }
+  };
+  if (back && fxOn()) { back.classList.add("flipout"); setTimeout(() => build(true), 190); }
+  else { build(!!back); }
 }
 function markSlot(sel, cls) { const c = $(sel).querySelector(".card"); if (c) c.classList.add(cls); }
 
@@ -568,7 +594,7 @@ function winScreen() {
   const humanWon = !w.isAI;
   FX.rain(); FX.burst(innerWidth / 2, innerHeight / 2, "255,207,63", 60, { spread: 14, g: 0.12 }); shake(1.4);
   humanWon ? Snd.win() : Snd.lose();
-  showOverlay(`<div class="winbanner">🏆 ${w.name} gewinnt!</div>
+  showOverlay(`<div class="winbanner">🏆 ${w.name} ${w.name === "Du" ? "gewinnst" : "gewinnt"}!</div>
     <div class="wingems">${"◆".repeat(w.crystals)}</div>
     <p>${w.crystals} Kristalle gesammelt in ${game.round} Runden.</p>
     <button class="big" id="againBtn">Nochmal</button>

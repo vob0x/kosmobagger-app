@@ -272,3 +272,17 @@ body{background:radial-gradient(1200px 820px at 50% -18%, #1b2648 0%, #0b1022 55
 /* Banner-Pop bei neuer Meldung */
 #centerMsg.pop{animation:msgpop .4s cubic-bezier(.2,1.5,.4,1)}
 @keyframes msgpop{0%{transform:scale(.7);opacity:.25}60%{transform:scale(1.08)}100%{transform:scale(1);opacity:1}}
+
+/* Vorrats-Anzeige im Einkommen-Dialog (immer sichtbar fuer die Zielgruppe) */
+.incstat{display:flex;gap:20px;justify-content:center;align-items:center;margin:4px 0 18px;font-weight:800;font-size:22px;color:#eaf0ff}
+.incstat span{display:inline-flex;align-items:center;gap:7px;background:rgba(12,20,42,.55);border:1px solid rgba(120,150,220,.28);border-radius:12px;padding:6px 12px}
+.incstat img{width:28px;height:28px;object-fit:contain;filter:drop-shadow(0 0 6px rgba(120,200,255,.5))}
+
+/* Verdeckte, gespielte Karte (wartet auf das Aufdecken) */
+.slot .card.pending{box-shadow:0 0 0 2px rgba(130,175,255,.45),0 0 24px rgba(90,140,240,.45);animation:pendpulse 1.5s ease-in-out infinite}
+@keyframes pendpulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.14)}}
+/* Umdrehen: Rueckseite dreht weg (dann kommt vorne per flipin herein) */
+.slot .card.flipout{animation:flipout .19s ease-in forwards}
+@keyframes flipout{to{transform:rotateY(90deg);opacity:.55}}
+/* Booster-/Abschlepper-Kennzeichen oben rechts */
+.card .specialbadge{position:absolute;top:6px;right:6px;font-size:22px;line-height:1;filter:drop-shadow(0 1px 3px rgba(0,0,0,.85))}
