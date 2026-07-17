@@ -290,9 +290,11 @@ body{background:radial-gradient(1200px 820px at 50% -18%, #1b2648 0%, #0b1022 55
 @keyframes msgpop{0%{transform:scale(.7);opacity:.25}60%{transform:scale(1.08)}100%{transform:scale(1);opacity:1}}
 
 /* Vorrats-Anzeige im Einkommen-Dialog (immer sichtbar fuer die Zielgruppe) */
-.incstat{display:flex;gap:20px;justify-content:center;align-items:center;margin:4px 0 18px;font-weight:800;font-size:22px;color:#eaf0ff}
-.incstat span{display:inline-flex;align-items:center;gap:7px;background:rgba(12,20,42,.55);border:1px solid rgba(120,150,220,.28);border-radius:12px;padding:6px 12px}
-.incstat img{width:28px;height:28px;object-fit:contain;filter:drop-shadow(0 0 6px rgba(120,200,255,.5))}
+.incstat{display:flex;gap:14px;justify-content:center;align-items:center;margin:4px 0 18px;flex-wrap:wrap}
+.incstat span{display:inline-flex;align-items:center;gap:5px;background:rgba(12,20,42,.55);border:1px solid rgba(120,150,220,.28);border-radius:12px;padding:7px 11px}
+.incstat .cell{width:32px;height:32px;display:inline-flex}
+.incstat .cell img{width:100%;height:100%;object-fit:contain;filter:grayscale(1) brightness(.45);opacity:.32;transition:.2s}
+.incstat .cell.on img{opacity:1;filter:drop-shadow(0 0 8px rgba(120,200,255,.85))}
 
 /* Verdeckte, gespielte Karte (wartet auf das Aufdecken) */
 .slot .card.pending{box-shadow:0 0 0 2px rgba(130,175,255,.45),0 0 24px rgba(90,140,240,.45);animation:pendpulse 1.5s ease-in-out infinite}
@@ -1364,10 +1366,11 @@ function startHumanTurn(human) {
 function promptIncome(human) {
   clearActions();
   const m2 = game.opts.modules >= 2;
+  // Symbole zum Abzaehlen statt Zahlen (Zielgruppe kann noch nicht lesen)
   const stat = `<div class="incstat">
-      <span title="Treibstoff"><img src="assets/kanister.png" alt="">${human.fuel}/${TANK_MAX}</span>
-      ${m2 ? `<span title="Batterie"><img src="assets/batterie.png" alt="">${human.bat}/${BAT_MAX}</span>` : ""}
-      <span title="Kristalle"><img src="assets/kristall.png" alt="">${human.crystals}/${game.opts.target}</span>
+      <span title="Treibstoff">${gauge("assets/kanister.png", human.fuel, TANK_MAX)}</span>
+      ${m2 ? `<span title="Batterie">${gauge("assets/batterie.png", human.bat, BAT_MAX)}</span>` : ""}
+      <span title="Kristalle">${gauge("assets/kristall.png", human.crystals, game.opts.target, true)}</span>
     </div>`;
   showOverlay(`<h2>Einkommen</h2><p>Nimm eines pro Runde — dein Vorrat:</p>${stat}
     <div style="display:flex;gap:12px;justify-content:center">

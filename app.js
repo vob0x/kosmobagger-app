@@ -448,10 +448,11 @@ function startHumanTurn(human) {
 function promptIncome(human) {
   clearActions();
   const m2 = game.opts.modules >= 2;
+  // Symbole zum Abzaehlen statt Zahlen (Zielgruppe kann noch nicht lesen)
   const stat = `<div class="incstat">
-      <span title="Treibstoff"><img src="assets/kanister.png" alt="">${human.fuel}/${TANK_MAX}</span>
-      ${m2 ? `<span title="Batterie"><img src="assets/batterie.png" alt="">${human.bat}/${BAT_MAX}</span>` : ""}
-      <span title="Kristalle"><img src="assets/kristall.png" alt="">${human.crystals}/${game.opts.target}</span>
+      <span title="Treibstoff">${gauge("assets/kanister.png", human.fuel, TANK_MAX)}</span>
+      ${m2 ? `<span title="Batterie">${gauge("assets/batterie.png", human.bat, BAT_MAX)}</span>` : ""}
+      <span title="Kristalle">${gauge("assets/kristall.png", human.crystals, game.opts.target, true)}</span>
     </div>`;
   showOverlay(`<h2>Einkommen</h2><p>Nimm eines pro Runde — dein Vorrat:</p>${stat}
     <div style="display:flex;gap:12px;justify-content:center">
