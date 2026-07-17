@@ -156,15 +156,43 @@ function floatText(x, y, text, color, big) {
   if (!fxOn() || x == null) return;
   const d = document.createElement("div"); d.className = "floattext" + (big ? " big" : "");
   d.textContent = text; d.style.left = x + "px"; d.style.top = y + "px"; if (color) d.style.color = color;
-  document.body.appendChild(d); setTimeout(() => d.remove(), 1120);
+  document.body.appendChild(d); setTimeout(() => d.remove(), 2300);
 }
 function flyToken(img, toSel, from) {
   if (!fxOn()) return;
   const to = centerOf(toSel), s = from || { x: innerWidth / 2, y: innerHeight / 2 };
   const im = document.createElement("img"); im.className = "flytoken"; im.src = img;
   im.style.left = s.x + "px"; im.style.top = s.y + "px"; document.body.appendChild(im);
-  requestAnimationFrame(() => { im.style.left = to.x + "px"; im.style.top = to.y + "px"; im.style.transform = "translate(-50%,-50%) scale(.55)"; im.style.opacity = "0"; });
-  setTimeout(() => im.remove(), 580);
+  requestAnimationFrame(() => { im.style.left = to.x + "px"; im.style.top = to.y + "px"; im.style.transform = "translate(-50%,-50%) scale(.6)"; im.style.opacity = "0"; });
+  setTimeout(() => {                       // beim Ankommen leuchtet die Anzeige kurz auf
+    im.remove();
+    const t = $(toSel); if (t && t.classList) { t.classList.remove("pulse"); void t.offsetWidth; t.classList.add("pulse"); }
+  }, 1000);
+}
+
+// Karte legen: fliegt ~1 s von der Hand auf den Bauplatz und dreht sich dabei verdeckt.
+function flyCardToSlot(card) {
+  return new Promise(res => {
+    if (!fxOn() || !card) return res();
+    const src = document.querySelector(`#meArea .mehand .card[data-uid="${card.uid}"]`);
+    const slot = $("#meSlot");
+    if (!src || !slot || !src.getBoundingClientRect || !slot.getBoundingClientRect) return res();
+    const r = src.getBoundingClientRect(), t = slot.getBoundingClientRect();
+    if (!r.width || !t.width) return res();
+    const g = document.createElement("div");
+    g.className = "flycard";
+    g.style.backgroundImage = `url("${card.img}")`;
+    g.style.left = r.left + "px"; g.style.top = r.top + "px";
+    g.style.width = r.width + "px"; g.style.height = r.height + "px";
+    document.body.appendChild(g);
+    src.style.visibility = "hidden";
+    requestAnimationFrame(() => {
+      g.style.left = t.left + "px"; g.style.top = t.top + "px";
+      g.style.width = t.width + "px"; g.style.height = t.height + "px";
+    });
+    setTimeout(() => { g.style.backgroundImage = `url("${CARD_BACK}")`; }, 500);  // dreht sich verdeckt
+    setTimeout(() => { g.remove(); res(); }, 1000);
+  });
 }
 
 // ---------- Welten-Effekte im Kampf ----------
@@ -394,6 +422,7 @@ function renderHand() {
     wrap.style.setProperty("--rot", rot + "deg");
     wrap.style.transform = `rotate(${rot}deg) translateY(${lift}px)`;
     const el = cardEl(card);
+    el.dataset.uid = card.uid;                 // damit die Karte beim Legen wiedergefunden wird
     if (dealNow) { el.classList.add("deal"); el.style.setProperty("--i", idx); }
     const playableMachine = card.kraft && card.cost <= me.fuel && affordableBuild;
     const playableSpecial = (card.kind === "booster" || card.kind === "tow") && affordableBuild;
@@ -510,9 +539,12 @@ function promptIncome(human) {
       <button class="big" style="max-width:170px" id="inFuel">⛽ Kanister</button>
       <button class="big" style="max-width:170px;background:linear-gradient(180deg,#5be08a,#28a35a)" id="inBat">🔋 Batterie</button>
     </div>`);
-  const pick = k => {
-    game.setIncome(human.idx, k); hideOverlay(); renderBoard();
-    flyToken(k === "bat" ? "assets/batterie.png" : "assets/kanister.png", k === "bat" ? "#meArea .batt" : "#meArea .tank", centerOf("#centerMsg"));
+  const pick = async k => {
+    game.setIncome(human.idx, k); hideOverlay();
+    const sel = k === "bat" ? "#meArea .batt" : "#meArea .tank";
+    flyToken(k === "bat" ? "assets/batterie.png" : "assets/kanister.png", sel, centerOf("#centerMsg"));
+    await sleep(1000);        // die Anzeige fuellt sich erst, wenn das Symbol ankommt
+    renderBoard();
     promptCommit(human);
   };
   $("#inFuel").onclick = () => pick("fuel");
@@ -536,13 +568,21 @@ function promptCommit(human) {
   flash(`Runde ${game.round} · ${human.name}${human.name === "Du" ? " bist" : " ist"} dran`);
 }
 
-function doCommit(action) {
+async function doCommit(action) {
   if (!acting) return;
   acting = false;
-  if (["build", "booster", "tow", "repair"].includes(action.type)) Snd.place(); else Snd.click();
-  if (action.type === "booster") { const bc = game.handCard(game.players[persp], action.uid); if (bc) flyToken(bc.gives === "bat" ? "assets/batterie.png" : "assets/kanister.png", bc.gives === "bat" ? "#meArea .batt" : "#meArea .tank", centerOf("#meSlot")); }
-  game.commit(persp, action);
   clearActions(); selUid = null;
+  const card = action.uid != null ? game.handCard(game.players[persp], action.uid) : null;
+  if (card) {
+    await flyCardToSlot(card);          // ~1 s: Karte fliegt auf den Bauplatz
+    Snd.place();                        // Ton beim Aufsetzen, nicht beim Klick
+  } else if (action.type === "repair") Snd.place();
+  else Snd.click();
+  if (action.type === "booster" && card) {
+    flyToken(card.gives === "bat" ? "assets/batterie.png" : "assets/kanister.png",
+      card.gives === "bat" ? "#meArea .batt" : "#meArea .tank", centerOf("#meSlot"));
+  }
+  game.commit(persp, action);
   advance();
 }
 
@@ -627,19 +667,35 @@ async function revealAndResolve() {
       flash(`${clash.ea} : ${clash.eb} — ${wn} ${wn === "Du" ? "gewinnst" : "gewinnt"}`);
     }
   } else if (score) {
+    // --- Durchkommen: die Maschine bricht durch die Luecke und holt den Kristall ---
+    const meScored = score.i === 0;
+    const sel = meScored ? "#meSlot" : "#oppSlot";
+    const sc = centerOf(sel);
+    const thruCard = meScored ? d0.card : d1.card;
+    const el = $(sel + " .card");
+    flash(`${game.players[score.i].name} kommt durch!`);
+    if (el) el.classList.add("through");
+    Snd.place();
+    worldFx(thruCard, sc);                                  // Anfahren
+    shake(0.5);
+    await sleep(430);
+    const gap = { x: sc.x, y: sc.y + (meScored ? -175 : 175) };   // dort, wo der Gegner fehlt
+    worldFx(thruCard, gap, true);                           // Durchbruch
+    FX.ring(gap.x, gap.y, "87,208,232", 10);
+    await sleep(380);
     Snd.score();
-    const sc = centerOf(score.i === persp ? "#meSlot" : "#oppSlot");
     FX.sparkle(sc.x, sc.y, "120,225,255", 26); FX.ring(sc.x, sc.y, "87,208,232", 8);
     floatText(sc.x, sc.y - 60, "+1 ◆", "#8cebff", true);
-    flyToken("assets/kristall.png", score.i === 0 ? "#meArea .crystals" : "#oppArea .crystals", sc);
+    flyToken("assets/kristall.png", meScored ? "#meArea .crystals" : "#oppArea .crystals", gap);
     flash(`${game.players[score.i].name} kommt durch — ◆ +1 Kristall`);
-    markSlot(score.i === 0 ? "#meSlot" : "#oppSlot", "win");
     pulseCrystals(score.i);
+    await sleep(300);
+    if (el) el.classList.remove("through");
   } else if (!towed) {
     flash("Nichts passiert");
   }
   const win = ev.find(e => e.t === "win");
-  await sleep(win ? 1500 : 2300);
+  await sleep(win ? 1900 : 2600);   // Zahlen/Kristall stehen ~2,2 s -> Ergebnis nicht vorher wegnehmen
   advance();
 }
 
