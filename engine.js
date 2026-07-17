@@ -169,7 +169,10 @@ export class Game {
         else ev.push({ t: "towpick", i });   // eigentliche Wirkung unten (auf pre-Slot)
       } else if (a.type === "repair") {
         if (p.bat >= 2) {
-          const idx = p.garage.findIndex(c => c.kraft);
+          // a.uid: gewaehlte Maschine aus der Garage. Ohne uid: erste Maschine (Fallback).
+          let idx = -1;
+          if (a.uid != null) idx = p.garage.findIndex(c => c.uid === a.uid && c.kraft);
+          if (idx < 0) idx = p.garage.findIndex(c => c.kraft);
           if (idx >= 0) { p.bat -= 2; const c = p.garage.splice(idx, 1)[0]; p.hand.push(c); ev.push({ t: "repair", i, card: c }); }
         }
       } else {
@@ -265,7 +268,10 @@ export class Game {
       return { type: "build", uid: c.uid, turbo };
     }
     // Nichts bezahlbar: Reparieren > Booster > Abschlepper-Plus > Pass
-    if (acts.some(a => a.type === "repair")) return { type: "repair" };
+    if (acts.some(a => a.type === "repair")) {
+      const best = p.garage.filter(c => c.kraft).sort((x, y) => y.kraft - x.kraft)[0];
+      return best ? { type: "repair", uid: best.uid } : { type: "repair" };
+    }
     const boost = acts.find(a => a.type === "booster");
     if (boost) return boost;
     const plus = acts.find(a => a.type === "tow" && a.mode === "plus");

@@ -305,6 +305,12 @@ body{background:radial-gradient(1200px 820px at 50% -18%, #1b2648 0%, #0b1022 55
 /* Booster-/Abschlepper-Kennzeichen oben rechts */
 .card .specialbadge{position:absolute;top:6px;right:6px;font-size:22px;line-height:1;filter:drop-shadow(0 1px 3px rgba(0,0,0,.85))}
 
+/* Reparieren: Maschine aus der Garage auswaehlen (Bilder antippen, kein Text noetig) */
+.repgrid{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;max-height:52vh;overflow-y:auto;padding:6px 2px}
+.repcard{width:92px;height:129px;background-size:cover;background-position:center;border-radius:10px;cursor:pointer;
+  border:2px solid rgba(120,150,220,.42);box-shadow:0 6px 16px rgba(0,0,0,.5);transition:transform .15s,box-shadow .15s,border-color .15s}
+.repcard:hover{transform:translateY(-7px) scale(1.07);border-color:#ffd479;box-shadow:0 14px 30px rgba(0,0,0,.65),0 0 22px rgba(255,207,63,.45)}
+
 </style>
 </head>
 <body>
@@ -811,7 +817,10 @@ class Game {
         else ev.push({ t: "towpick", i });   // eigentliche Wirkung unten (auf pre-Slot)
       } else if (a.type === "repair") {
         if (p.bat >= 2) {
-          const idx = p.garage.findIndex(c => c.kraft);
+          // a.uid: gewaehlte Maschine aus der Garage. Ohne uid: erste Maschine (Fallback).
+          let idx = -1;
+          if (a.uid != null) idx = p.garage.findIndex(c => c.uid === a.uid && c.kraft);
+          if (idx < 0) idx = p.garage.findIndex(c => c.kraft);
           if (idx >= 0) { p.bat -= 2; const c = p.garage.splice(idx, 1)[0]; p.hand.push(c); ev.push({ t: "repair", i, card: c }); }
         }
       } else {
@@ -907,7 +916,10 @@ class Game {
       return { type: "build", uid: c.uid, turbo };
     }
     // Nichts bezahlbar: Reparieren > Booster > Abschlepper-Plus > Pass
-    if (acts.some(a => a.type === "repair")) return { type: "repair" };
+    if (acts.some(a => a.type === "repair")) {
+      const best = p.garage.filter(c => c.kraft).sort((x, y) => y.kraft - x.kraft)[0];
+      return best ? { type: "repair", uid: best.uid } : { type: "repair" };
+    }
     const boost = acts.find(a => a.type === "booster");
     if (boost) return boost;
     const plus = acts.find(a => a.type === "tow" && a.mode === "plus");
@@ -1320,8 +1332,25 @@ function baseActions() {
   const me = game.players[persp];
   clearActions();
   if (game.opts.modules >= 2 && me.bat >= 2 && me.garage.some(c => c.kraft))
-    addBtn("Reparieren (2 🔋)", () => doCommit({ type: "repair" }));
+    addBtn("Reparieren (2 🔋)", () => { Snd.click(); showRepairPick(); });
   addBtn("Sparen (nichts bauen)", () => doCommit({ type: "pass" }), true);
+}
+
+// Reparieren: Regel sagt "eine beliebige Maschine aus der Garage" -> Spieler waehlt.
+function showRepairPick() {
+  const me = game.players[persp];
+  const machines = me.garage.filter(c => c.kraft);
+  if (!machines.length) return;
+  const cards = machines
+    .map(c => `<div class="repcard" data-uid="${c.uid}" title="${c.name}" style="background-image:url('${c.img}')"></div>`)
+    .join("");
+  showOverlay(`<h2>Reparieren</h2><p>Welche Maschine holst du zurück?</p>
+    <div class="repgrid">${cards}</div>
+    <button class="big" id="repCancel" style="background:#131a30;color:#cfe;margin-top:14px">Zurück</button>`);
+  $$("#overlay .repcard").forEach(el => el.addEventListener("click", () => {
+    hideOverlay(); doCommit({ type: "repair", uid: +el.dataset.uid });
+  }));
+  $("#repCancel").onclick = () => { Snd.click(); hideOverlay(); baseActions(); };
 }
 
 // ---------- Ablauf ----------

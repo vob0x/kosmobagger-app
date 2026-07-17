@@ -402,8 +402,25 @@ function baseActions() {
   const me = game.players[persp];
   clearActions();
   if (game.opts.modules >= 2 && me.bat >= 2 && me.garage.some(c => c.kraft))
-    addBtn("Reparieren (2 🔋)", () => doCommit({ type: "repair" }));
+    addBtn("Reparieren (2 🔋)", () => { Snd.click(); showRepairPick(); });
   addBtn("Sparen (nichts bauen)", () => doCommit({ type: "pass" }), true);
+}
+
+// Reparieren: Regel sagt "eine beliebige Maschine aus der Garage" -> Spieler waehlt.
+function showRepairPick() {
+  const me = game.players[persp];
+  const machines = me.garage.filter(c => c.kraft);
+  if (!machines.length) return;
+  const cards = machines
+    .map(c => `<div class="repcard" data-uid="${c.uid}" title="${c.name}" style="background-image:url('${c.img}')"></div>`)
+    .join("");
+  showOverlay(`<h2>Reparieren</h2><p>Welche Maschine holst du zurück?</p>
+    <div class="repgrid">${cards}</div>
+    <button class="big" id="repCancel" style="background:#131a30;color:#cfe;margin-top:14px">Zurück</button>`);
+  $$("#overlay .repcard").forEach(el => el.addEventListener("click", () => {
+    hideOverlay(); doCommit({ type: "repair", uid: +el.dataset.uid });
+  }));
+  $("#repCancel").onclick = () => { Snd.click(); hideOverlay(); baseActions(); };
 }
 
 // ---------- Ablauf ----------
