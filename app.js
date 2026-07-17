@@ -1,5 +1,5 @@
 import { Game, TANK_MAX, BAT_MAX } from "./engine.js";
-import { CARD_BACK } from "./cards.js";
+import { CARD_BACK, WORLD_COLORS } from "./cards.js";
 
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
@@ -165,6 +165,40 @@ function flyToken(img, toSel, from) {
   im.style.left = s.x + "px"; im.style.top = s.y + "px"; document.body.appendChild(im);
   requestAnimationFrame(() => { im.style.left = to.x + "px"; im.style.top = to.y + "px"; im.style.transform = "translate(-50%,-50%) scale(.55)"; im.style.opacity = "0"; });
   setTimeout(() => im.remove(), 580);
+}
+
+// ---------- Welten-Effekte im Kampf ----------
+function hexRgb(h) { const n = parseInt(String(h).slice(1), 16); return `${(n >> 16) & 255},${(n >> 8) & 255},${n & 255}`; }
+function wRgb(card) { const c = card && WORLD_COLORS[card.world]; return c ? hexRgb(c) : "255,207,63"; }
+
+// Jede Welt kaempft anders: Kosmos funkelt, Bau schuettet Schutt,
+// Trucks qualmen und spruehen Funken, Technik entlaedt Energie.
+function worldFx(card, p, strong = false) {
+  if (!card || !p) return;
+  const c = wRgb(card), n = strong ? 26 : 16;
+  switch (card.world) {
+    case "KOSMOS":
+      FX.sparkle(p.x, p.y, c, n + 10);
+      FX.sparkle(p.x, p.y, "200,225,255", n - 4);
+      if (strong) FX.ring(p.x, p.y, c, 10);
+      break;
+    case "BAU":
+      FX.burst(p.x, p.y, c, n, { spread: 7, g: 0.62 });            // Schutt faellt
+      FX.burst(p.x, p.y, "158,146,124", n - 6, { spread: 3.5, g: 0.04 });  // Staubwolke
+      break;
+    case "TRUCKS":
+      FX.burst(p.x, p.y, "122,124,138", n, { spread: 3.2, g: -0.05 });     // Qualm steigt
+      FX.burst(p.x, p.y, "255,150,60", n - 4, { spread: 10, g: 0.5, long: true }); // Funken
+      if (strong) FX.burst(p.x, p.y, c, 10, { spread: 8, g: 0.35 });
+      break;
+    case "TECHNIK":
+      FX.sparkle(p.x, p.y, c, n + 6);
+      FX.burst(p.x, p.y, "150,255,210", n - 4, { spread: 12, g: 0.02, long: true }); // Energie-Arcs
+      if (strong) FX.ring(p.x, p.y, c, 8);
+      break;
+    default:
+      FX.burst(p.x, p.y, c, n, { spread: 8 });
+  }
 }
 
 const cfg = { mode: "ai", modules: 2, target: 5, ai: 0.85 };
@@ -541,7 +575,26 @@ async function revealAndResolve() {
   showSlotReveal($("#meSlot"), disp(0));
   showSlotReveal($("#oppSlot"), disp(1));
   flash("Aufdecken!");
-  await sleep(1300);
+  await sleep(1100);
+
+  // --- Kampfsequenz (~2 s): nur wenn wirklich zwei Maschinen aufeinandertreffen ---
+  const d0 = disp(0), d1 = disp(1);
+  const fight = !!(d0.card && d0.card.kraft && d1.card && d1.card.kraft);
+  if (fight) {
+    flash("Kampf!");
+    const meP = centerOf("#meSlot"), opP = centerOf("#oppSlot");
+    const mc = $("#meSlot .card"), oc = $("#oppSlot .card");
+    if (mc) mc.classList.add("fight");
+    if (oc) oc.classList.add("fight");
+    worldFx(d0.card, meP); worldFx(d1.card, opP);
+    shake(0.45);
+    await sleep(700);
+    worldFx(d0.card, meP, true); worldFx(d1.card, opP, true);   // zweite, staerkere Welle
+    shake(0.7);
+    await sleep(700);
+    if (mc) mc.classList.remove("fight");     // vor win/lose entfernen, sonst ueberschreibt es die Animation
+    if (oc) oc.classList.remove("fight");
+  }
 
   const ev = game.resolve();     // mutiert Zustand; danach lesen wir die Events
   // Kampf-Animation
@@ -552,7 +605,11 @@ async function revealAndResolve() {
   if (towed) { flash("🚛 abgeschleppt!"); Snd.place(); FX.burst(centerOf("#oppSlot").x, centerOf("#oppSlot").y, "176,182,190", 20); }
   if (clash) {
     Snd.clash(); shake(clash.winner === -1 ? 1.3 : 1); flashScreen();
-    FX.ring(mid.x, mid.y, "255,207,63"); FX.burst(mid.x, mid.y, "255,180,60", 34, { spread: 11 });
+    FX.ring(mid.x, mid.y, "255,207,63"); FX.burst(mid.x, mid.y, "255,180,60", 30, { spread: 11 });
+    if (fight) {   // beide Welten schlagen im Aufprall zusammen
+      FX.burst(mid.x, mid.y, wRgb(d0.card), 16, { spread: 10, g: 0.3 });
+      FX.burst(mid.x, mid.y, wRgb(d1.card), 16, { spread: 10, g: 0.3 });
+    }
     const meP = centerOf("#meSlot"), opP = centerOf("#oppSlot");
     if (clash.winner === -1) {
       markSlot("#meSlot", "lose"); markSlot("#oppSlot", "lose"); FX.burst(mid.x, mid.y, "255,90,90", 30);

@@ -289,6 +289,26 @@ body{background:radial-gradient(1200px 820px at 50% -18%, #1b2648 0%, #0b1022 55
 /* Booster-/Abschlepper-Kennzeichen oben rechts */
 .card .specialbadge{position:absolute;top:6px;right:6px;font-size:22px;line-height:1;filter:drop-shadow(0 1px 3px rgba(0,0,0,.85))}
 
+/* Kampfsequenz: die Maschinen gehen aufeinander los (Du unten, Gegner oben) */
+#meSlot .card.fight{animation:fightUp 1.4s cubic-bezier(.4,0,.3,1)}
+#oppSlot .card.fight{animation:fightDown 1.4s cubic-bezier(.4,0,.3,1)}
+@keyframes fightUp{
+  0%{transform:translateY(0)}
+  22%{transform:translateY(10px) scale(.97)}                 /* ausholen */
+  46%{transform:translateY(-30px) scale(1.06) rotate(-1.5deg)}
+  62%{transform:translateY(-16px) scale(1.02)}
+  84%{transform:translateY(-30px) scale(1.06) rotate(1.5deg)}
+  100%{transform:translateY(-8px) scale(1.02)}
+}
+@keyframes fightDown{
+  0%{transform:translateY(0)}
+  22%{transform:translateY(-10px) scale(.97)}
+  46%{transform:translateY(30px) scale(1.06) rotate(1.5deg)}
+  62%{transform:translateY(16px) scale(1.02)}
+  84%{transform:translateY(30px) scale(1.06) rotate(-1.5deg)}
+  100%{transform:translateY(8px) scale(1.02)}
+}
+
 /* Reparieren: Maschine aus der Garage auswaehlen (Bilder antippen, kein Text noetig) */
 .repgrid{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;max-height:52vh;overflow-y:auto;padding:6px 2px}
 .repcard{width:92px;height:129px;background-size:cover;background-position:center;border-radius:10px;cursor:pointer;

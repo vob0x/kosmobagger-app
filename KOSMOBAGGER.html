@@ -305,6 +305,26 @@ body{background:radial-gradient(1200px 820px at 50% -18%, #1b2648 0%, #0b1022 55
 /* Booster-/Abschlepper-Kennzeichen oben rechts */
 .card .specialbadge{position:absolute;top:6px;right:6px;font-size:22px;line-height:1;filter:drop-shadow(0 1px 3px rgba(0,0,0,.85))}
 
+/* Kampfsequenz: die Maschinen gehen aufeinander los (Du unten, Gegner oben) */
+#meSlot .card.fight{animation:fightUp 1.4s cubic-bezier(.4,0,.3,1)}
+#oppSlot .card.fight{animation:fightDown 1.4s cubic-bezier(.4,0,.3,1)}
+@keyframes fightUp{
+  0%{transform:translateY(0)}
+  22%{transform:translateY(10px) scale(.97)}                 /* ausholen */
+  46%{transform:translateY(-30px) scale(1.06) rotate(-1.5deg)}
+  62%{transform:translateY(-16px) scale(1.02)}
+  84%{transform:translateY(-30px) scale(1.06) rotate(1.5deg)}
+  100%{transform:translateY(-8px) scale(1.02)}
+}
+@keyframes fightDown{
+  0%{transform:translateY(0)}
+  22%{transform:translateY(-10px) scale(.97)}
+  46%{transform:translateY(30px) scale(1.06) rotate(1.5deg)}
+  62%{transform:translateY(16px) scale(1.02)}
+  84%{transform:translateY(30px) scale(1.06) rotate(-1.5deg)}
+  100%{transform:translateY(8px) scale(1.02)}
+}
+
 /* Reparieren: Maschine aus der Garage auswaehlen (Bilder antippen, kein Text noetig) */
 .repgrid{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;max-height:52vh;overflow-y:auto;padding:6px 2px}
 .repcard{width:92px;height:129px;background-size:cover;background-position:center;border-radius:10px;cursor:pointer;
@@ -1097,6 +1117,40 @@ function flyToken(img, toSel, from) {
   setTimeout(() => im.remove(), 580);
 }
 
+// ---------- Welten-Effekte im Kampf ----------
+function hexRgb(h) { const n = parseInt(String(h).slice(1), 16); return `${(n >> 16) & 255},${(n >> 8) & 255},${n & 255}`; }
+function wRgb(card) { const c = card && WORLD_COLORS[card.world]; return c ? hexRgb(c) : "255,207,63"; }
+
+// Jede Welt kaempft anders: Kosmos funkelt, Bau schuettet Schutt,
+// Trucks qualmen und spruehen Funken, Technik entlaedt Energie.
+function worldFx(card, p, strong = false) {
+  if (!card || !p) return;
+  const c = wRgb(card), n = strong ? 26 : 16;
+  switch (card.world) {
+    case "KOSMOS":
+      FX.sparkle(p.x, p.y, c, n + 10);
+      FX.sparkle(p.x, p.y, "200,225,255", n - 4);
+      if (strong) FX.ring(p.x, p.y, c, 10);
+      break;
+    case "BAU":
+      FX.burst(p.x, p.y, c, n, { spread: 7, g: 0.62 });            // Schutt faellt
+      FX.burst(p.x, p.y, "158,146,124", n - 6, { spread: 3.5, g: 0.04 });  // Staubwolke
+      break;
+    case "TRUCKS":
+      FX.burst(p.x, p.y, "122,124,138", n, { spread: 3.2, g: -0.05 });     // Qualm steigt
+      FX.burst(p.x, p.y, "255,150,60", n - 4, { spread: 10, g: 0.5, long: true }); // Funken
+      if (strong) FX.burst(p.x, p.y, c, 10, { spread: 8, g: 0.35 });
+      break;
+    case "TECHNIK":
+      FX.sparkle(p.x, p.y, c, n + 6);
+      FX.burst(p.x, p.y, "150,255,210", n - 4, { spread: 12, g: 0.02, long: true }); // Energie-Arcs
+      if (strong) FX.ring(p.x, p.y, c, 8);
+      break;
+    default:
+      FX.burst(p.x, p.y, c, n, { spread: 8 });
+  }
+}
+
 const cfg = { mode: "ai", modules: 2, target: 5, ai: 0.85 };
 let game = null;
 let persp = 0;          // aus wessen Sicht der Tisch gerade gezeigt wird
@@ -1471,7 +1525,26 @@ async function revealAndResolve() {
   showSlotReveal($("#meSlot"), disp(0));
   showSlotReveal($("#oppSlot"), disp(1));
   flash("Aufdecken!");
-  await sleep(1300);
+  await sleep(1100);
+
+  // --- Kampfsequenz (~2 s): nur wenn wirklich zwei Maschinen aufeinandertreffen ---
+  const d0 = disp(0), d1 = disp(1);
+  const fight = !!(d0.card && d0.card.kraft && d1.card && d1.card.kraft);
+  if (fight) {
+    flash("Kampf!");
+    const meP = centerOf("#meSlot"), opP = centerOf("#oppSlot");
+    const mc = $("#meSlot .card"), oc = $("#oppSlot .card");
+    if (mc) mc.classList.add("fight");
+    if (oc) oc.classList.add("fight");
+    worldFx(d0.card, meP); worldFx(d1.card, opP);
+    shake(0.45);
+    await sleep(700);
+    worldFx(d0.card, meP, true); worldFx(d1.card, opP, true);   // zweite, staerkere Welle
+    shake(0.7);
+    await sleep(700);
+    if (mc) mc.classList.remove("fight");     // vor win/lose entfernen, sonst ueberschreibt es die Animation
+    if (oc) oc.classList.remove("fight");
+  }
 
   const ev = game.resolve();     // mutiert Zustand; danach lesen wir die Events
   // Kampf-Animation
@@ -1482,7 +1555,11 @@ async function revealAndResolve() {
   if (towed) { flash("🚛 abgeschleppt!"); Snd.place(); FX.burst(centerOf("#oppSlot").x, centerOf("#oppSlot").y, "176,182,190", 20); }
   if (clash) {
     Snd.clash(); shake(clash.winner === -1 ? 1.3 : 1); flashScreen();
-    FX.ring(mid.x, mid.y, "255,207,63"); FX.burst(mid.x, mid.y, "255,180,60", 34, { spread: 11 });
+    FX.ring(mid.x, mid.y, "255,207,63"); FX.burst(mid.x, mid.y, "255,180,60", 30, { spread: 11 });
+    if (fight) {   // beide Welten schlagen im Aufprall zusammen
+      FX.burst(mid.x, mid.y, wRgb(d0.card), 16, { spread: 10, g: 0.3 });
+      FX.burst(mid.x, mid.y, wRgb(d1.card), 16, { spread: 10, g: 0.3 });
+    }
     const meP = centerOf("#meSlot"), opP = centerOf("#oppSlot");
     if (clash.winner === -1) {
       markSlot("#meSlot", "lose"); markSlot("#oppSlot", "lose"); FX.burst(mid.x, mid.y, "255,90,90", 30);
