@@ -549,29 +549,67 @@ function addBtn(label, fn, ghost) {
   b.addEventListener("click", fn); $("#actionbar").appendChild(b); return b;
 }
 
+// Piktogramme im Artwork-Stil (kraeftig, dicke runde Formen) — die Zielgruppe kann noch nicht lesen.
+const ICON = {
+  build: `<svg class="psvg" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 7v20" fill="none" stroke="#fff" stroke-width="5.5" stroke-linecap="round"/><path d="M14 19l10 10 10-10" fill="none" stroke="#fff" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/><rect x="9" y="36" width="30" height="6.5" rx="3.2" fill="#fff"/></svg>`,
+  wrench: `<svg class="psvg" viewBox="0 0 48 48" aria-hidden="true"><path d="M34 6.5a10 10 0 00-11.6 12.9L7.7 34a4.3 4.3 0 106.1 6.1l14.6-14.6A10 10 0 0041.5 14l-6.4 6.4-4.9-1-1-4.9L35.6 8z" fill="#fff"/></svg>`,
+  hook: `<svg class="psvg" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="9" r="4.6" fill="none" stroke="#fff" stroke-width="4"/><path d="M24 14v12a8.5 8.5 0 11-8.5 8.5" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/></svg>`,
+  back: `<svg class="psvg" viewBox="0 0 48 48" aria-hidden="true"><path d="M29 9L15 24l14 15" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  again: `<svg class="psvg" viewBox="0 0 48 48" aria-hidden="true"><path d="M39 24a15 15 0 10-4.6 10.8" fill="none" stroke="#fff" stroke-width="5.5" stroke-linecap="round"/><path d="M39 9v11H28" fill="none" stroke="#fff" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  home: `<svg class="psvg" viewBox="0 0 48 48" aria-hidden="true"><path d="M6 25L24 9l18 16" fill="none" stroke="#fff" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/><rect x="12" y="23" width="24" height="17" rx="2.5" fill="#fff"/><rect x="20" y="30" width="8" height="10" rx="1.5" fill="#1a2447"/></svg>`,
+  plus: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#39c26a" stroke="#0f2e1c" stroke-width="1.6"/><path d="M12 6v12M6 12h12" stroke="#fff" stroke-width="3.2" stroke-linecap="round"/></svg>`,
+  keep: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#5aa0e6" stroke="#12294a" stroke-width="1.6"/><path d="M7 14l5-5 5 5" fill="none" stroke="#fff" stroke-width="2.9" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  bolt: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#1a2138" stroke="#0b1024" stroke-width="1.4"/><path d="M13.5 4L7 13.5h4L9.5 20l7.5-9.5h-5L13.5 4z" fill="#ffd23f"/></svg>`
+};
+function costPips(icon, n) { let s = ""; for (let i = 0; i < Math.min(n, 6); i++) s += `<img class="cpip" src="${icon}" alt="">`; return s; }
+function resImg(icon) { return `<img class="pbig" src="${icon}" alt="">`; }
+// Grosser, selbsterklaerender Piktogramm-Button (kein sichtbarer Text; Titel/aria fuer Vorleser & Screenreader).
+function iconBtn(opts) {
+  const b = document.createElement("button");
+  b.className = "pbtn" + (opts.cls ? " " + opts.cls : "") + (opts.ghost ? " pghost" : "");
+  b.title = opts.title; b.setAttribute("aria-label", opts.title);
+  b.innerHTML = `<span class="picon">${opts.icon}${opts.badge ? `<span class="pbadge">${opts.badge}</span>` : ""}</span>`
+    + (opts.cost ? `<span class="pcost">${opts.cost}</span>` : "");
+  b.addEventListener("click", opts.fn); $("#actionbar").appendChild(b); return b;
+}
+
 function showActions(card) {
   const me = game.players[persp];
   clearActions();
   if (card.kraft) {
-    addBtn(`Bauen  (${card.cost} ⛽)`, () => doCommit({ type: "build", uid: card.uid, turbo: false }));
+    iconBtn({ cls: "pbuild", title: `Bauen (kostet ${card.cost} Kanister)`, icon: ICON.build,
+      cost: costPips("assets/kanister.png", card.cost),
+      fn: () => doCommit({ type: "build", uid: card.uid, turbo: false }) });
     if (game.opts.modules >= 2 && me.bat > 0)
-      addBtn(`Bauen + Turbo 🔋 (+2)`, () => doCommit({ type: "build", uid: card.uid, turbo: true }));
+      iconBtn({ cls: "pturbo", title: "Bauen mit Turbo — Batterie einsetzen, +2 stärker", icon: ICON.build, badge: ICON.bolt,
+        cost: costPips("assets/kanister.png", card.cost) + costPips("assets/batterie.png", 1),
+        fn: () => doCommit({ type: "build", uid: card.uid, turbo: true }) });
   } else if (card.kind === "booster") {
-    addBtn(`Ausspielen: +1 ${card.gives === "bat" ? "🔋" : "⛽"}`, () => doCommit({ type: "booster", uid: card.uid }));
+    const img = card.gives === "bat" ? "assets/batterie.png" : "assets/kanister.png";
+    iconBtn({ cls: card.gives === "bat" ? "pgainb" : "pgain", title: `Ausspielen: +1 ${card.gives === "bat" ? "Batterie" : "Kanister"}`,
+      icon: resImg(img), badge: ICON.plus, fn: () => doCommit({ type: "booster", uid: card.uid }) });
   } else if (card.kind === "tow") {
-    if (game.players[1 - persp].slot) addBtn(`Abschleppen 🚛`, () => doCommit({ type: "tow", uid: card.uid, mode: "tow" }));
-    addBtn(`Nachschub: +1 ⛽`, () => doCommit({ type: "tow", uid: card.uid, mode: "plus", plusType: "fuel" }));
-    if (game.opts.modules >= 2) addBtn(`Nachschub: +1 🔋`, () => doCommit({ type: "tow", uid: card.uid, mode: "plus", plusType: "bat" }));
+    if (game.players[1 - persp].slot)
+      iconBtn({ cls: "ptow", title: "Gegner-Maschine abschleppen", icon: ICON.hook,
+        fn: () => doCommit({ type: "tow", uid: card.uid, mode: "tow" }) });
+    iconBtn({ cls: "pgain", title: "Nachschub: +1 Kanister", icon: resImg("assets/kanister.png"), badge: ICON.plus,
+      fn: () => doCommit({ type: "tow", uid: card.uid, mode: "plus", plusType: "fuel" }) });
+    if (game.opts.modules >= 2)
+      iconBtn({ cls: "pgainb", title: "Nachschub: +1 Batterie", icon: resImg("assets/batterie.png"), badge: ICON.plus,
+        fn: () => doCommit({ type: "tow", uid: card.uid, mode: "plus", plusType: "bat" }) });
   }
-  addBtn("Zurück", () => { selUid = null; renderHand(); baseActions(); }, true);
+  iconBtn({ cls: "pback", ghost: true, title: "Zurück", icon: ICON.back,
+    fn: () => { selUid = null; renderHand(); baseActions(); } });
 }
 
 function baseActions() {
   const me = game.players[persp];
   clearActions();
   if (game.opts.modules >= 2 && me.bat >= 2 && me.garage.some(c => c.kraft))
-    addBtn("Reparieren (2 🔋)", () => { Snd.click(); showRepairPick(); });
-  addBtn("Sparen (nichts bauen)", () => doCommit({ type: "pass" }), true);
+    iconBtn({ cls: "prepair", title: "Reparieren — Maschine zurückholen (kostet 2 Batterien)", icon: ICON.wrench,
+      cost: costPips("assets/batterie.png", 2), fn: () => { Snd.click(); showRepairPick(); } });
+  iconBtn({ cls: "psave", ghost: true, title: "Sparen — nichts bauen, Treibstoff behalten und weiter sammeln",
+    icon: resImg("assets/kanister.png"), badge: ICON.keep, fn: () => doCommit({ type: "pass" }) });
 }
 
 // Reparieren: Regel sagt "eine beliebige Maschine aus der Garage" -> Spieler waehlt.
@@ -584,7 +622,7 @@ function showRepairPick() {
     .join("");
   showOverlay(`<h2>Reparieren</h2><p>Welche Maschine holst du zurück?</p>
     <div class="repgrid">${cards}</div>
-    <button class="big" id="repCancel" style="background:#131a30;color:#cfe;margin-top:14px">Zurück</button>`);
+    <div class="incpick" style="margin-top:14px"><button class="pbtn pback pghost pbig-btn" id="repCancel" title="Zurück" aria-label="Zurück"><span class="picon">${ICON.back}</span></button></div>`);
   $$("#overlay .repcard").forEach(el => el.addEventListener("click", () => {
     hideOverlay(); doCommit({ type: "repair", uid: +el.dataset.uid });
   }));
@@ -640,9 +678,9 @@ function promptIncome(human) {
       <span title="Kristalle">${gauge("assets/kristall.png", human.crystals, game.opts.target, true)}</span>
     </div>`;
   showOverlay(`<h2>Einkommen</h2><p>Nimm eines pro Runde — dein Vorrat:</p>${stat}
-    <div style="display:flex;gap:12px;justify-content:center">
-      <button class="big" style="max-width:170px" id="inFuel">⛽ Kanister</button>
-      <button class="big" style="max-width:170px;background:linear-gradient(180deg,#5be08a,#28a35a)" id="inBat">🔋 Batterie</button>
+    <div class="incpick">
+      <button class="pbtn pincome pfuel" id="inFuel" title="Kanister nehmen" aria-label="Kanister nehmen"><img class="pbig xl" src="assets/kanister.png" alt=""></button>
+      ${m2 ? `<button class="pbtn pincome pbat" id="inBat" title="Batterie nehmen" aria-label="Batterie nehmen"><img class="pbig xl" src="assets/batterie.png" alt=""></button>` : ""}
     </div>`);
   const pick = async k => {
     game.setIncome(human.idx, k); hideOverlay();
@@ -654,7 +692,7 @@ function promptIncome(human) {
     promptCommit(human);
   };
   $("#inFuel").onclick = () => pick("fuel");
-  $("#inBat").onclick = () => pick("bat");
+  if ($("#inBat")) $("#inBat").onclick = () => pick("bat");
 }
 
 function promptCommit(human) {
@@ -856,8 +894,10 @@ function winScreen() {
     showOverlay(`<div class="winbanner">🏆 ${w.name} ${w.name === "Du" ? "gewinnst" : "gewinnt"}!</div>
       <div class="wingems">${"◆".repeat(w.crystals)}</div>
       <p>${w.crystals} Kristalle gesammelt in ${game.round} Runden.</p>
-      <button class="big" id="againBtn">Nochmal</button>
-      <button class="big" id="menu2" style="background:#131a30;color:#cfe;margin-top:10px">Menü</button>`);
+      <div class="incpick" style="margin-top:16px">
+        <button class="pbtn pagain pbig-btn" id="againBtn" title="Nochmal spielen" aria-label="Nochmal spielen"><span class="picon">${ICON.again}</span></button>
+        <button class="pbtn phome pghost pbig-btn" id="menu2" title="Zurück zum Menü" aria-label="Zurück zum Menü"><span class="picon">${ICON.home}</span></button>
+      </div>`);
     $("#againBtn").onclick = () => { Snd.click(); startGame(); };
     $("#menu2").onclick = () => { Snd.click(); hideOverlay(); backToMenu(); };
   };

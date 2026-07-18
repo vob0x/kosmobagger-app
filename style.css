@@ -91,10 +91,10 @@ body{
 /* ---------- Aktionsleiste ---------- */
 #actionbar{position:absolute;bottom:calc(var(--cardh) + 60px);left:50%;transform:translateX(-50%);
   display:flex;gap:10px;flex-wrap:wrap;justify-content:center;max-width:92vw;z-index:20}
-#actionbar button{padding:10px 16px;border-radius:11px;border:1px solid #6b83d6;cursor:pointer;font-size:14px;font-weight:600;
+#actionbar button:not(.pbtn){padding:10px 16px;border-radius:11px;border:1px solid #6b83d6;cursor:pointer;font-size:14px;font-weight:600;
   background:linear-gradient(180deg,#3a5bd0,#2b47ab);color:#fff;box-shadow:0 6px 16px rgba(43,71,171,.4)}
-#actionbar button.ghost{background:#131a30;border-color:var(--line);color:var(--dim)}
-#actionbar button:hover{filter:brightness(1.08)}
+#actionbar button.ghost:not(.pbtn){background:#131a30;border-color:var(--line);color:var(--dim)}
+#actionbar button:not(.pbtn):hover{filter:brightness(1.08)}
 
 #menuBtn{position:absolute;top:8px;right:10px;z-index:30;background:#131a30;color:var(--ink);
   border:1px solid var(--line);border-radius:9px;width:36px;height:32px;cursor:pointer;font-size:16px}
@@ -177,7 +177,7 @@ body{background:radial-gradient(1200px 820px at 50% -18%, #1b2648 0%, #0b1022 55
 .hand .handcard.play:hover .card{transform:translateY(-42px) scale(1.16) rotate(calc(-1*var(--rot)));box-shadow:0 28px 48px rgba(0,0,0,.72),0 0 28px rgba(120,180,255,.45)}
 
 /* Buttons glossy */
-#actionbar button{background:linear-gradient(180deg,#4a6ff0,#2b47ab);border-color:#7d95e6;box-shadow:0 8px 20px rgba(43,71,171,.5),inset 0 1px 0 rgba(255,255,255,.25)}
+#actionbar button:not(.pbtn){background:linear-gradient(180deg,#4a6ff0,#2b47ab);border-color:#7d95e6;box-shadow:0 8px 20px rgba(43,71,171,.5),inset 0 1px 0 rgba(255,255,255,.25)}
 .big{box-shadow:0 10px 26px rgba(245,168,28,.5),inset 0 1px 0 rgba(255,255,255,.4)}
 .seg button.on{box-shadow:0 6px 18px rgba(43,71,171,.6),inset 0 1px 0 rgba(255,255,255,.2)}
 
@@ -416,3 +416,31 @@ body.playing #introwrap{opacity:0}
 .repcard{width:92px;height:129px;background-size:cover;background-position:center;border-radius:10px;cursor:pointer;
   border:2px solid rgba(120,150,220,.42);box-shadow:0 6px 16px rgba(0,0,0,.5);transition:transform .15s,box-shadow .15s,border-color .15s}
 .repcard:hover{transform:translateY(-7px) scale(1.07);border-color:#ffd479;box-shadow:0 14px 30px rgba(0,0,0,.65),0 0 22px rgba(255,207,63,.45)}
+
+/* ---------- Piktogramm-Buttons (Zielgruppe kann noch nicht lesen) ---------- */
+.pbtn{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+  width:96px;min-height:96px;padding:12px 8px;border-radius:22px;border:0;cursor:pointer;color:#fff;
+  background:linear-gradient(180deg,#4a6ff0,#2b47ab);
+  box-shadow:0 9px 22px rgba(15,25,60,.5),inset 0 2px 0 rgba(255,255,255,.32),inset 0 -5px 10px rgba(0,0,0,.24);
+  transition:transform .12s ease,filter .12s ease}
+.pbtn:hover{filter:brightness(1.08)}
+.pbtn:active{transform:translateY(2px) scale(.97)}
+.pbtn .picon{position:relative;display:flex;align-items:center;justify-content:center;line-height:0}
+.pbtn .psvg{width:48px;height:48px;filter:drop-shadow(0 2px 3px rgba(0,0,0,.4))}
+.pbtn .pbig{width:50px;height:50px;object-fit:contain;filter:drop-shadow(0 3px 5px rgba(0,0,0,.45))}
+.pbtn .pbig.xl{width:88px;height:88px}
+.pbtn .pbadge{position:absolute;right:-12px;top:-12px;width:28px;height:28px;line-height:0;
+  filter:drop-shadow(0 2px 4px rgba(0,0,0,.5))}
+.pbtn .pbadge svg{width:28px;height:28px}
+.pbtn .pcost{display:flex;gap:3px;align-items:center;justify-content:center;flex-wrap:wrap;max-width:88px}
+.pbtn .cpip{width:18px;height:18px;object-fit:contain;filter:drop-shadow(0 1px 2px rgba(0,0,0,.45))}
+/* Farbcodierung je Aktion (Kind lernt die Farbe + Form) */
+.pbtn.pbuild,.pbtn.pturbo,.pbtn.pgainb,.pbtn.pagain{background:linear-gradient(180deg,#4ecb76,#248a45)}
+.pbtn.prepair,.pbtn.pgain,.pbtn.pfuel{background:linear-gradient(180deg,#f2b24a,#c47a1a)}
+.pbtn.ptow{background:linear-gradient(180deg,#e2564a,#b3352c)}
+.pbtn.pbat{background:linear-gradient(180deg,#4ecb76,#248a45)}
+.pbtn.pghost,.pbtn.psave,.pbtn.pback,.pbtn.phome{background:linear-gradient(180deg,#2c3654,#1a2138)}
+/* Einkommen: extra grosse Auswahlflaechen */
+.incpick{display:flex;gap:16px;justify-content:center;align-items:center;flex-wrap:wrap}
+.pbtn.pincome{width:150px;min-height:150px;border-radius:28px}
+.pbtn.pbig-btn{width:84px;min-height:84px}

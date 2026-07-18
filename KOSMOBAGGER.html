@@ -107,10 +107,10 @@ body{
 /* ---------- Aktionsleiste ---------- */
 #actionbar{position:absolute;bottom:calc(var(--cardh) + 60px);left:50%;transform:translateX(-50%);
   display:flex;gap:10px;flex-wrap:wrap;justify-content:center;max-width:92vw;z-index:20}
-#actionbar button{padding:10px 16px;border-radius:11px;border:1px solid #6b83d6;cursor:pointer;font-size:14px;font-weight:600;
+#actionbar button:not(.pbtn){padding:10px 16px;border-radius:11px;border:1px solid #6b83d6;cursor:pointer;font-size:14px;font-weight:600;
   background:linear-gradient(180deg,#3a5bd0,#2b47ab);color:#fff;box-shadow:0 6px 16px rgba(43,71,171,.4)}
-#actionbar button.ghost{background:#131a30;border-color:var(--line);color:var(--dim)}
-#actionbar button:hover{filter:brightness(1.08)}
+#actionbar button.ghost:not(.pbtn){background:#131a30;border-color:var(--line);color:var(--dim)}
+#actionbar button:not(.pbtn):hover{filter:brightness(1.08)}
 
 #menuBtn{position:absolute;top:8px;right:10px;z-index:30;background:#131a30;color:var(--ink);
   border:1px solid var(--line);border-radius:9px;width:36px;height:32px;cursor:pointer;font-size:16px}
@@ -193,7 +193,7 @@ body{background:radial-gradient(1200px 820px at 50% -18%, #1b2648 0%, #0b1022 55
 .hand .handcard.play:hover .card{transform:translateY(-42px) scale(1.16) rotate(calc(-1*var(--rot)));box-shadow:0 28px 48px rgba(0,0,0,.72),0 0 28px rgba(120,180,255,.45)}
 
 /* Buttons glossy */
-#actionbar button{background:linear-gradient(180deg,#4a6ff0,#2b47ab);border-color:#7d95e6;box-shadow:0 8px 20px rgba(43,71,171,.5),inset 0 1px 0 rgba(255,255,255,.25)}
+#actionbar button:not(.pbtn){background:linear-gradient(180deg,#4a6ff0,#2b47ab);border-color:#7d95e6;box-shadow:0 8px 20px rgba(43,71,171,.5),inset 0 1px 0 rgba(255,255,255,.25)}
 .big{box-shadow:0 10px 26px rgba(245,168,28,.5),inset 0 1px 0 rgba(255,255,255,.4)}
 .seg button.on{box-shadow:0 6px 18px rgba(43,71,171,.6),inset 0 1px 0 rgba(255,255,255,.2)}
 
@@ -432,6 +432,34 @@ body.playing #introwrap{opacity:0}
 .repcard{width:92px;height:129px;background-size:cover;background-position:center;border-radius:10px;cursor:pointer;
   border:2px solid rgba(120,150,220,.42);box-shadow:0 6px 16px rgba(0,0,0,.5);transition:transform .15s,box-shadow .15s,border-color .15s}
 .repcard:hover{transform:translateY(-7px) scale(1.07);border-color:#ffd479;box-shadow:0 14px 30px rgba(0,0,0,.65),0 0 22px rgba(255,207,63,.45)}
+
+/* ---------- Piktogramm-Buttons (Zielgruppe kann noch nicht lesen) ---------- */
+.pbtn{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+  width:96px;min-height:96px;padding:12px 8px;border-radius:22px;border:0;cursor:pointer;color:#fff;
+  background:linear-gradient(180deg,#4a6ff0,#2b47ab);
+  box-shadow:0 9px 22px rgba(15,25,60,.5),inset 0 2px 0 rgba(255,255,255,.32),inset 0 -5px 10px rgba(0,0,0,.24);
+  transition:transform .12s ease,filter .12s ease}
+.pbtn:hover{filter:brightness(1.08)}
+.pbtn:active{transform:translateY(2px) scale(.97)}
+.pbtn .picon{position:relative;display:flex;align-items:center;justify-content:center;line-height:0}
+.pbtn .psvg{width:48px;height:48px;filter:drop-shadow(0 2px 3px rgba(0,0,0,.4))}
+.pbtn .pbig{width:50px;height:50px;object-fit:contain;filter:drop-shadow(0 3px 5px rgba(0,0,0,.45))}
+.pbtn .pbig.xl{width:88px;height:88px}
+.pbtn .pbadge{position:absolute;right:-12px;top:-12px;width:28px;height:28px;line-height:0;
+  filter:drop-shadow(0 2px 4px rgba(0,0,0,.5))}
+.pbtn .pbadge svg{width:28px;height:28px}
+.pbtn .pcost{display:flex;gap:3px;align-items:center;justify-content:center;flex-wrap:wrap;max-width:88px}
+.pbtn .cpip{width:18px;height:18px;object-fit:contain;filter:drop-shadow(0 1px 2px rgba(0,0,0,.45))}
+/* Farbcodierung je Aktion (Kind lernt die Farbe + Form) */
+.pbtn.pbuild,.pbtn.pturbo,.pbtn.pgainb,.pbtn.pagain{background:linear-gradient(180deg,#4ecb76,#248a45)}
+.pbtn.prepair,.pbtn.pgain,.pbtn.pfuel{background:linear-gradient(180deg,#f2b24a,#c47a1a)}
+.pbtn.ptow{background:linear-gradient(180deg,#e2564a,#b3352c)}
+.pbtn.pbat{background:linear-gradient(180deg,#4ecb76,#248a45)}
+.pbtn.pghost,.pbtn.psave,.pbtn.pback,.pbtn.phome{background:linear-gradient(180deg,#2c3654,#1a2138)}
+/* Einkommen: extra grosse Auswahlflaechen */
+.incpick{display:flex;gap:16px;justify-content:center;align-items:center;flex-wrap:wrap}
+.pbtn.pincome{width:150px;min-height:150px;border-radius:28px}
+.pbtn.pbig-btn{width:84px;min-height:84px}
 
 </style>
 </head>
@@ -1601,29 +1629,67 @@ function addBtn(label, fn, ghost) {
   b.addEventListener("click", fn); $("#actionbar").appendChild(b); return b;
 }
 
+// Piktogramme im Artwork-Stil (kraeftig, dicke runde Formen) — die Zielgruppe kann noch nicht lesen.
+const ICON = {
+  build: `<svg class="psvg" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 7v20" fill="none" stroke="#fff" stroke-width="5.5" stroke-linecap="round"/><path d="M14 19l10 10 10-10" fill="none" stroke="#fff" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/><rect x="9" y="36" width="30" height="6.5" rx="3.2" fill="#fff"/></svg>`,
+  wrench: `<svg class="psvg" viewBox="0 0 48 48" aria-hidden="true"><path d="M34 6.5a10 10 0 00-11.6 12.9L7.7 34a4.3 4.3 0 106.1 6.1l14.6-14.6A10 10 0 0041.5 14l-6.4 6.4-4.9-1-1-4.9L35.6 8z" fill="#fff"/></svg>`,
+  hook: `<svg class="psvg" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="9" r="4.6" fill="none" stroke="#fff" stroke-width="4"/><path d="M24 14v12a8.5 8.5 0 11-8.5 8.5" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/></svg>`,
+  back: `<svg class="psvg" viewBox="0 0 48 48" aria-hidden="true"><path d="M29 9L15 24l14 15" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  again: `<svg class="psvg" viewBox="0 0 48 48" aria-hidden="true"><path d="M39 24a15 15 0 10-4.6 10.8" fill="none" stroke="#fff" stroke-width="5.5" stroke-linecap="round"/><path d="M39 9v11H28" fill="none" stroke="#fff" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  home: `<svg class="psvg" viewBox="0 0 48 48" aria-hidden="true"><path d="M6 25L24 9l18 16" fill="none" stroke="#fff" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/><rect x="12" y="23" width="24" height="17" rx="2.5" fill="#fff"/><rect x="20" y="30" width="8" height="10" rx="1.5" fill="#1a2447"/></svg>`,
+  plus: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#39c26a" stroke="#0f2e1c" stroke-width="1.6"/><path d="M12 6v12M6 12h12" stroke="#fff" stroke-width="3.2" stroke-linecap="round"/></svg>`,
+  keep: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#5aa0e6" stroke="#12294a" stroke-width="1.6"/><path d="M7 14l5-5 5 5" fill="none" stroke="#fff" stroke-width="2.9" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  bolt: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#1a2138" stroke="#0b1024" stroke-width="1.4"/><path d="M13.5 4L7 13.5h4L9.5 20l7.5-9.5h-5L13.5 4z" fill="#ffd23f"/></svg>`
+};
+function costPips(icon, n) { let s = ""; for (let i = 0; i < Math.min(n, 6); i++) s += `<img class="cpip" src="${icon}" alt="">`; return s; }
+function resImg(icon) { return `<img class="pbig" src="${icon}" alt="">`; }
+// Grosser, selbsterklaerender Piktogramm-Button (kein sichtbarer Text; Titel/aria fuer Vorleser & Screenreader).
+function iconBtn(opts) {
+  const b = document.createElement("button");
+  b.className = "pbtn" + (opts.cls ? " " + opts.cls : "") + (opts.ghost ? " pghost" : "");
+  b.title = opts.title; b.setAttribute("aria-label", opts.title);
+  b.innerHTML = `<span class="picon">${opts.icon}${opts.badge ? `<span class="pbadge">${opts.badge}</span>` : ""}</span>`
+    + (opts.cost ? `<span class="pcost">${opts.cost}</span>` : "");
+  b.addEventListener("click", opts.fn); $("#actionbar").appendChild(b); return b;
+}
+
 function showActions(card) {
   const me = game.players[persp];
   clearActions();
   if (card.kraft) {
-    addBtn(`Bauen  (${card.cost} ⛽)`, () => doCommit({ type: "build", uid: card.uid, turbo: false }));
+    iconBtn({ cls: "pbuild", title: `Bauen (kostet ${card.cost} Kanister)`, icon: ICON.build,
+      cost: costPips("assets/kanister.png", card.cost),
+      fn: () => doCommit({ type: "build", uid: card.uid, turbo: false }) });
     if (game.opts.modules >= 2 && me.bat > 0)
-      addBtn(`Bauen + Turbo 🔋 (+2)`, () => doCommit({ type: "build", uid: card.uid, turbo: true }));
+      iconBtn({ cls: "pturbo", title: "Bauen mit Turbo — Batterie einsetzen, +2 stärker", icon: ICON.build, badge: ICON.bolt,
+        cost: costPips("assets/kanister.png", card.cost) + costPips("assets/batterie.png", 1),
+        fn: () => doCommit({ type: "build", uid: card.uid, turbo: true }) });
   } else if (card.kind === "booster") {
-    addBtn(`Ausspielen: +1 ${card.gives === "bat" ? "🔋" : "⛽"}`, () => doCommit({ type: "booster", uid: card.uid }));
+    const img = card.gives === "bat" ? "assets/batterie.png" : "assets/kanister.png";
+    iconBtn({ cls: card.gives === "bat" ? "pgainb" : "pgain", title: `Ausspielen: +1 ${card.gives === "bat" ? "Batterie" : "Kanister"}`,
+      icon: resImg(img), badge: ICON.plus, fn: () => doCommit({ type: "booster", uid: card.uid }) });
   } else if (card.kind === "tow") {
-    if (game.players[1 - persp].slot) addBtn(`Abschleppen 🚛`, () => doCommit({ type: "tow", uid: card.uid, mode: "tow" }));
-    addBtn(`Nachschub: +1 ⛽`, () => doCommit({ type: "tow", uid: card.uid, mode: "plus", plusType: "fuel" }));
-    if (game.opts.modules >= 2) addBtn(`Nachschub: +1 🔋`, () => doCommit({ type: "tow", uid: card.uid, mode: "plus", plusType: "bat" }));
+    if (game.players[1 - persp].slot)
+      iconBtn({ cls: "ptow", title: "Gegner-Maschine abschleppen", icon: ICON.hook,
+        fn: () => doCommit({ type: "tow", uid: card.uid, mode: "tow" }) });
+    iconBtn({ cls: "pgain", title: "Nachschub: +1 Kanister", icon: resImg("assets/kanister.png"), badge: ICON.plus,
+      fn: () => doCommit({ type: "tow", uid: card.uid, mode: "plus", plusType: "fuel" }) });
+    if (game.opts.modules >= 2)
+      iconBtn({ cls: "pgainb", title: "Nachschub: +1 Batterie", icon: resImg("assets/batterie.png"), badge: ICON.plus,
+        fn: () => doCommit({ type: "tow", uid: card.uid, mode: "plus", plusType: "bat" }) });
   }
-  addBtn("Zurück", () => { selUid = null; renderHand(); baseActions(); }, true);
+  iconBtn({ cls: "pback", ghost: true, title: "Zurück", icon: ICON.back,
+    fn: () => { selUid = null; renderHand(); baseActions(); } });
 }
 
 function baseActions() {
   const me = game.players[persp];
   clearActions();
   if (game.opts.modules >= 2 && me.bat >= 2 && me.garage.some(c => c.kraft))
-    addBtn("Reparieren (2 🔋)", () => { Snd.click(); showRepairPick(); });
-  addBtn("Sparen (nichts bauen)", () => doCommit({ type: "pass" }), true);
+    iconBtn({ cls: "prepair", title: "Reparieren — Maschine zurückholen (kostet 2 Batterien)", icon: ICON.wrench,
+      cost: costPips("assets/batterie.png", 2), fn: () => { Snd.click(); showRepairPick(); } });
+  iconBtn({ cls: "psave", ghost: true, title: "Sparen — nichts bauen, Treibstoff behalten und weiter sammeln",
+    icon: resImg("assets/kanister.png"), badge: ICON.keep, fn: () => doCommit({ type: "pass" }) });
 }
 
 // Reparieren: Regel sagt "eine beliebige Maschine aus der Garage" -> Spieler waehlt.
@@ -1636,7 +1702,7 @@ function showRepairPick() {
     .join("");
   showOverlay(`<h2>Reparieren</h2><p>Welche Maschine holst du zurück?</p>
     <div class="repgrid">${cards}</div>
-    <button class="big" id="repCancel" style="background:#131a30;color:#cfe;margin-top:14px">Zurück</button>`);
+    <div class="incpick" style="margin-top:14px"><button class="pbtn pback pghost pbig-btn" id="repCancel" title="Zurück" aria-label="Zurück"><span class="picon">${ICON.back}</span></button></div>`);
   $$("#overlay .repcard").forEach(el => el.addEventListener("click", () => {
     hideOverlay(); doCommit({ type: "repair", uid: +el.dataset.uid });
   }));
@@ -1692,9 +1758,9 @@ function promptIncome(human) {
       <span title="Kristalle">${gauge("assets/kristall.png", human.crystals, game.opts.target, true)}</span>
     </div>`;
   showOverlay(`<h2>Einkommen</h2><p>Nimm eines pro Runde — dein Vorrat:</p>${stat}
-    <div style="display:flex;gap:12px;justify-content:center">
-      <button class="big" style="max-width:170px" id="inFuel">⛽ Kanister</button>
-      <button class="big" style="max-width:170px;background:linear-gradient(180deg,#5be08a,#28a35a)" id="inBat">🔋 Batterie</button>
+    <div class="incpick">
+      <button class="pbtn pincome pfuel" id="inFuel" title="Kanister nehmen" aria-label="Kanister nehmen"><img class="pbig xl" src="assets/kanister.png" alt=""></button>
+      ${m2 ? `<button class="pbtn pincome pbat" id="inBat" title="Batterie nehmen" aria-label="Batterie nehmen"><img class="pbig xl" src="assets/batterie.png" alt=""></button>` : ""}
     </div>`);
   const pick = async k => {
     game.setIncome(human.idx, k); hideOverlay();
@@ -1706,7 +1772,7 @@ function promptIncome(human) {
     promptCommit(human);
   };
   $("#inFuel").onclick = () => pick("fuel");
-  $("#inBat").onclick = () => pick("bat");
+  if ($("#inBat")) $("#inBat").onclick = () => pick("bat");
 }
 
 function promptCommit(human) {
@@ -1908,8 +1974,10 @@ function winScreen() {
     showOverlay(`<div class="winbanner">🏆 ${w.name} ${w.name === "Du" ? "gewinnst" : "gewinnt"}!</div>
       <div class="wingems">${"◆".repeat(w.crystals)}</div>
       <p>${w.crystals} Kristalle gesammelt in ${game.round} Runden.</p>
-      <button class="big" id="againBtn">Nochmal</button>
-      <button class="big" id="menu2" style="background:#131a30;color:#cfe;margin-top:10px">Menü</button>`);
+      <div class="incpick" style="margin-top:16px">
+        <button class="pbtn pagain pbig-btn" id="againBtn" title="Nochmal spielen" aria-label="Nochmal spielen"><span class="picon">${ICON.again}</span></button>
+        <button class="pbtn phome pghost pbig-btn" id="menu2" title="Zurück zum Menü" aria-label="Zurück zum Menü"><span class="picon">${ICON.home}</span></button>
+      </div>`);
     $("#againBtn").onclick = () => { Snd.click(); startGame(); };
     $("#menu2").onclick = () => { Snd.click(); hideOverlay(); backToMenu(); };
   };
