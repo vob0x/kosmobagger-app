@@ -440,6 +440,10 @@ body.playing #introwrap{opacity:0}
 .pbtn.ptow{background:linear-gradient(180deg,#e2564a,#b3352c)}
 .pbtn.pbat{background:linear-gradient(180deg,#4ecb76,#248a45)}
 .pbtn.pghost,.pbtn.psave,.pbtn.pback,.pbtn.phome{background:linear-gradient(180deg,#2c3654,#1a2138)}
+/* Ausgegraut: Aktion gerade nicht moeglich (z. B. Abschleppen ohne Gegner-Maschine) */
+.pbtn.pdisabled{background:linear-gradient(180deg,#3a4056,#262b3d);cursor:not-allowed;opacity:.5;box-shadow:inset 0 2px 0 rgba(255,255,255,.1)}
+.pbtn.pdisabled:hover{filter:none}
+.pbtn.pdisabled:active{transform:none}
 /* Einkommen: extra grosse Auswahlflaechen */
 .incpick{display:flex;gap:16px;justify-content:center;align-items:center;flex-wrap:wrap}
 .pbtn.pincome{width:150px;min-height:150px;border-radius:28px}

@@ -551,7 +551,7 @@ function addBtn(label, fn, ghost) {
 
 // Piktogramme im Artwork-Stil (kraeftig, dicke runde Formen) — die Zielgruppe kann noch nicht lesen.
 const ICON = {
-  build: `<svg class="psvg" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 7v20" fill="none" stroke="#fff" stroke-width="5.5" stroke-linecap="round"/><path d="M14 19l10 10 10-10" fill="none" stroke="#fff" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/><rect x="9" y="36" width="30" height="6.5" rx="3.2" fill="#fff"/></svg>`,
+  build: `<svg class="psvg" viewBox="0 0 48 48" aria-hidden="true"><rect x="5" y="33" width="29" height="9" rx="4.5" fill="#fff"/><rect x="9" y="35.5" width="21" height="2.3" rx="1.15" fill="#2a7d49"/><rect x="12" y="20" width="15" height="13" rx="3" fill="#fff"/><path d="M25 23l9-6 4.5 6.5" fill="none" stroke="#fff" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M38.5 23.5c-1.2 5 1.8 7.6 6 6.3l-1.2-4.3" fill="none" stroke="#fff" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   wrench: `<svg class="psvg" viewBox="0 0 48 48" aria-hidden="true"><path d="M34 6.5a10 10 0 00-11.6 12.9L7.7 34a4.3 4.3 0 106.1 6.1l14.6-14.6A10 10 0 0041.5 14l-6.4 6.4-4.9-1-1-4.9L35.6 8z" fill="#fff"/></svg>`,
   hook: `<svg class="psvg" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="9" r="4.6" fill="none" stroke="#fff" stroke-width="4"/><path d="M24 14v12a8.5 8.5 0 11-8.5 8.5" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/></svg>`,
   back: `<svg class="psvg" viewBox="0 0 48 48" aria-hidden="true"><path d="M29 9L15 24l14 15" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
@@ -566,32 +566,35 @@ function resImg(icon) { return `<img class="pbig" src="${icon}" alt="">`; }
 // Grosser, selbsterklaerender Piktogramm-Button (kein sichtbarer Text; Titel/aria fuer Vorleser & Screenreader).
 function iconBtn(opts) {
   const b = document.createElement("button");
-  b.className = "pbtn" + (opts.cls ? " " + opts.cls : "") + (opts.ghost ? " pghost" : "");
+  b.className = "pbtn" + (opts.cls ? " " + opts.cls : "") + (opts.ghost ? " pghost" : "") + (opts.disabled ? " pdisabled" : "");
   b.title = opts.title; b.setAttribute("aria-label", opts.title);
   b.innerHTML = `<span class="picon">${opts.icon}${opts.badge ? `<span class="pbadge">${opts.badge}</span>` : ""}</span>`
     + (opts.cost ? `<span class="pcost">${opts.cost}</span>` : "");
-  b.addEventListener("click", opts.fn); $("#actionbar").appendChild(b); return b;
+  if (opts.disabled) { b.disabled = true; }
+  else b.addEventListener("click", opts.fn);
+  $("#actionbar").appendChild(b); return b;
 }
 
 function showActions(card) {
   const me = game.players[persp];
   clearActions();
   if (card.kraft) {
+    // Kosten stehen bereits auf der Karte (Kanister-Pips) -> Button zeigt nur die Maschine.
     iconBtn({ cls: "pbuild", title: `Bauen (kostet ${card.cost} Kanister)`, icon: ICON.build,
-      cost: costPips("assets/kanister.png", card.cost),
       fn: () => doCommit({ type: "build", uid: card.uid, turbo: false }) });
     if (game.opts.modules >= 2 && me.bat > 0)
       iconBtn({ cls: "pturbo", title: "Bauen mit Turbo — Batterie einsetzen, +2 stärker", icon: ICON.build, badge: ICON.bolt,
-        cost: costPips("assets/kanister.png", card.cost) + costPips("assets/batterie.png", 1),
         fn: () => doCommit({ type: "build", uid: card.uid, turbo: true }) });
   } else if (card.kind === "booster") {
     const img = card.gives === "bat" ? "assets/batterie.png" : "assets/kanister.png";
     iconBtn({ cls: card.gives === "bat" ? "pgainb" : "pgain", title: `Ausspielen: +1 ${card.gives === "bat" ? "Batterie" : "Kanister"}`,
       icon: resImg(img), badge: ICON.plus, fn: () => doCommit({ type: "booster", uid: card.uid }) });
   } else if (card.kind === "tow") {
-    if (game.players[1 - persp].slot)
-      iconBtn({ cls: "ptow", title: "Gegner-Maschine abschleppen", icon: ICON.hook,
-        fn: () => doCommit({ type: "tow", uid: card.uid, mode: "tow" }) });
+    // Abschleppen ist die Hauptfunktion -> immer zeigen; ohne Gegner-Maschine ausgegraut.
+    const hasTarget = !!game.players[1 - persp].slot;
+    iconBtn({ cls: "ptow", disabled: !hasTarget, icon: ICON.hook,
+      title: hasTarget ? "Gegner-Maschine abschleppen" : "Abschleppen — gerade keine Gegner-Maschine da",
+      fn: () => doCommit({ type: "tow", uid: card.uid, mode: "tow" }) });
     iconBtn({ cls: "pgain", title: "Nachschub: +1 Kanister", icon: resImg("assets/kanister.png"), badge: ICON.plus,
       fn: () => doCommit({ type: "tow", uid: card.uid, mode: "plus", plusType: "fuel" }) });
     if (game.opts.modules >= 2)
@@ -901,8 +904,6 @@ function winScreen() {
     $("#againBtn").onclick = () => { Snd.click(); startGame(); };
     $("#menu2").onclick = () => { Snd.click(); hideOverlay(); backToMenu(); };
   };
-  // Sieg: Vollbild-Sequenz, dann Ergebnis. Niederlage: vorerst direkt Ergebnis
-  // (gutes Lose-Video kommt, sobald Veo-Tageslimit frei ist -> dann hier "assets/lose.mp4").
-  if (humanWon) playFullscreenVideo("assets/win.mp4", show);
-  else show();
+  // Sieg- bzw. Niederlage-Sequenz als Vollbild, danach der Ergebnis-Bildschirm.
+  playFullscreenVideo(humanWon ? "assets/win.mp4" : "assets/lose.mp4", show);
 }
