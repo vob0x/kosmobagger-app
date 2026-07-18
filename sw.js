@@ -1,6 +1,6 @@
 // KOSMOBAGGER PWA Service-Worker.
 // App-Shell NETWORK-FIRST (online aktuell), Medien CACHE-FIRST (offline). Version bei Release erhoehen.
-const CACHE = "kosmobagger-v12";
+const CACHE = "kosmobagger-v13";
 const ASSETS = [
   "./",
   "index.html",
@@ -44,6 +44,7 @@ const ASSETS = [
   "icons/icon-512.png",
   "assets/arena.png",
   "assets/hero.png",
+  "assets/intro.mp4",
   "assets/batterie.png",
   "assets/kanister.png",
   "assets/kristall.png",
@@ -60,7 +61,7 @@ self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c =>
 self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener("fetch", e => {
   const req = e.request; if (req.method !== "GET") return;
-  const isMedia = /\.(png|jpe?g|webp|gif|svg|wav|mp3|ogg|woff2?)$/i.test(new URL(req.url).pathname);
+  const isMedia = /\.(png|jpe?g|webp|gif|svg|wav|mp3|ogg|mp4|webm|woff2?)$/i.test(new URL(req.url).pathname);
   if (isMedia) {
     e.respondWith(caches.match(req).then(hit => hit || fetch(req).then(res => { const c = res.clone(); caches.open(CACHE).then(ca => ca.put(req, c)).catch(()=>{}); return res; })));
   } else {

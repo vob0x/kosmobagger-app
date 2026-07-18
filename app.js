@@ -273,7 +273,39 @@ tryImg("assets/hero.png", u => {
   const box = document.querySelector(".menu-box");
   if (box && !$("#menuHero")) { const hero = document.createElement("div"); hero.id = "menuHero"; hero.style.backgroundImage = `url('${u}')`; box.insertBefore(hero, box.firstChild); }
 });
-$("#menuBtn").addEventListener("click", () => { $("#table").classList.add("hidden"); $("#menu").classList.remove("hidden"); hideOverlay(); });
+// Menue-Hintergrund: Intro-Video (stumm, Endlosschleife). Fehlt assets/intro.mp4,
+// bleibt einfach das Standbild arena.png stehen.
+let introVid = null;
+(() => {
+  try {
+    if (typeof document === "undefined" || typeof document.createElement !== "function") return;
+    const wrap = document.createElement("div"); wrap.id = "introwrap";
+    const v = document.createElement("video");
+    v.muted = true; v.loop = true; v.autoplay = true; v.playsInline = true; v.preload = "auto";
+    if (v.setAttribute) { v.setAttribute("playsinline", ""); v.setAttribute("muted", ""); }
+    if (v.addEventListener) {
+      v.addEventListener("error", () => { if (wrap.remove) wrap.remove(); });
+      // Autoplay ist nicht garantiert: bei canplay erneut versuchen, notfalls beim ersten Tap.
+      v.addEventListener("canplay", () => playIntro());
+      v.addEventListener("loadeddata", () => playIntro());
+    }
+    if (document.addEventListener) document.addEventListener("pointerdown", () => playIntro(), { once: true });
+    v.src = "assets/intro.mp4";
+    wrap.appendChild(v);
+    const app = $("#app");
+    if (app && app.parentNode && app.parentNode.insertBefore) app.parentNode.insertBefore(wrap, app);
+    else document.body.appendChild(wrap);
+    introVid = v;
+    playIntro();
+  } catch (e) { /* headless o.ae.: egal */ }
+})();
+function playIntro() { if (!introVid || !introVid.play) return; const p = introVid.play(); if (p && p.catch) p.catch(() => {}); }
+function backToMenu() {
+  $("#table").classList.add("hidden"); $("#menu").classList.remove("hidden");
+  if (document.body && document.body.classList) document.body.classList.remove("playing");
+  playIntro();
+}
+$("#menuBtn").addEventListener("click", () => { backToMenu(); hideOverlay(); });
 
 function startGame() {
   const hot = cfg.mode === "hot";
@@ -286,6 +318,8 @@ function startGame() {
   });
   $("#menu").classList.add("hidden");
   $("#table").classList.remove("hidden");
+  if (document.body && document.body.classList) document.body.classList.add("playing");
+  if (introVid && introVid.pause) introVid.pause();     // im Spiel kein bewegter Hintergrund
   FX.start();
   ["oppDeck", "meDeck"].forEach(id => { if (!$("#" + id)) { const d = document.createElement("div"); d.id = id; d.className = "deckpile"; $("#battle").appendChild(d); } });
   persp = 0;
@@ -731,5 +765,5 @@ function winScreen() {
     <button class="big" id="againBtn">Nochmal</button>
     <button class="big" id="menu2" style="background:#131a30;color:#cfe;margin-top:10px">Menü</button>`);
   $("#againBtn").onclick = () => { Snd.click(); startGame(); };
-  $("#menu2").onclick = () => { Snd.click(); hideOverlay(); $("#table").classList.add("hidden"); $("#menu").classList.remove("hidden"); };
+  $("#menu2").onclick = () => { Snd.click(); hideOverlay(); backToMenu(); };
 }

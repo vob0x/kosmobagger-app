@@ -298,6 +298,16 @@ body{background:radial-gradient(1200px 820px at 50% -18%, #1b2648 0%, #0b1022 55
 /* Booster-/Abschlepper-Kennzeichen oben rechts */
 .card .specialbadge{position:absolute;top:6px;right:6px;font-size:22px;line-height:1;filter:drop-shadow(0 1px 3px rgba(0,0,0,.85))}
 
+/* Menue-Hintergrund: Intro-Video, stumm in Endlosschleife. Im Spiel ausgeblendet
+   (Ablenkung + Akku) -> dann uebernimmt wieder das Standbild #arena darunter. */
+/* kein Fade: harter Schnitt beim Ansichtswechsel, sonst haengt der Layer im Zwischenzustand */
+#introwrap{position:fixed;inset:0;z-index:-1;pointer-events:none}
+body.playing #introwrap{display:none}
+#introwrap video{width:100%;height:100%;object-fit:cover;opacity:.5;filter:saturate(.85) brightness(.6)}
+#introwrap::after{content:"";position:absolute;inset:0;
+  background:radial-gradient(1200px 820px at 50% 42%,transparent,rgba(7,11,22,.68))}
+body.playing #introwrap{opacity:0}
+
 /* Karte legen (~1 s): fliegt von der Hand auf den Bauplatz und dreht sich dabei verdeckt */
 .flycard{position:fixed;z-index:62;pointer-events:none;background-size:cover;background-position:center;
   border-radius:11px;box-shadow:0 18px 40px rgba(0,0,0,.7),0 0 26px rgba(120,180,255,.5);
