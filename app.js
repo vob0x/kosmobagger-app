@@ -158,19 +158,40 @@ function floatText(x, y, text, color, big) {
   d.textContent = text; d.style.left = x + "px"; d.style.top = y + "px"; if (color) d.style.color = color;
   document.body.appendChild(d); setTimeout(() => d.remove(), 2300);
 }
+// Laesst die zuletzt gefuellte Zelle einer Anzeige kraeftig aufpoppen + Funken.
+function flashNewCell(sel, rgb) {
+  const t = $(sel); if (!t || !t.classList) return;
+  t.classList.remove("pulse"); void t.offsetWidth; t.classList.add("pulse");
+  const on = t.querySelectorAll(".cell.on"); const last = on[on.length - 1];
+  if (last) { last.classList.remove("justfilled"); void last.offsetWidth; last.classList.add("justfilled"); }
+  const c = centerOf(sel); FX.ring(c.x, c.y, rgb || "255,224,130", 9); FX.sparkle(c.x, c.y, rgb || "255,232,150", 16);
+}
 function flyToken(img, toSel, from) {
   if (!fxOn()) return;
   const to = centerOf(toSel), s = from || { x: innerWidth / 2, y: innerHeight / 2 };
   const im = document.createElement("img"); im.className = "flytoken"; im.src = img;
   im.style.left = s.x + "px"; im.style.top = s.y + "px"; document.body.appendChild(im);
-  requestAnimationFrame(() => { im.style.left = to.x + "px"; im.style.top = to.y + "px"; im.style.transform = "translate(-50%,-50%) scale(.6)"; im.style.opacity = "0"; });
-  setTimeout(() => {                       // beim Ankommen leuchtet die Anzeige kurz auf
-    im.remove();
-    const t = $(toSel); if (t && t.classList) { t.classList.remove("pulse"); void t.offsetWidth; t.classList.add("pulse"); }
-  }, 1000);
+  requestAnimationFrame(() => { im.style.left = to.x + "px"; im.style.top = to.y + "px"; im.style.transform = "translate(-50%,-50%) scale(.55)"; im.style.opacity = "0"; });
+  setTimeout(() => { im.remove(); flashNewCell(toSel); }, 560);   // beim Ankommen: neue Zelle poppt deutlich auf
 }
 
-// Karte legen: fliegt ~1 s von der Hand auf den Bauplatz und dreht sich dabei verdeckt.
+// Grosser Kristall zum Durchkommen: poppt gross auf, haelt kurz, fliegt dann in den Zaehler.
+function bigCrystalPop(x, y, toSel) {
+  if (!fxOn()) return;
+  FX.ring(x, y, "120,225,255", 13); FX.sparkle(x, y, "150,235,255", 28);
+  const im = document.createElement("img"); im.className = "bigcrystal"; im.src = "assets/kristall.png";
+  im.style.left = x + "px"; im.style.top = y + "px"; document.body.appendChild(im);
+  setTimeout(() => {                       // vom grossen Standbild zum Zaehler fliegen
+    im.style.animation = "none"; im.style.transform = "translate(-50%,-50%) scale(1.25)"; im.style.opacity = "1"; void im.offsetWidth;
+    const to = centerOf(toSel);
+    im.style.transition = "left .6s cubic-bezier(.4,.1,.2,1),top .6s cubic-bezier(.4,.1,.2,1),transform .6s,opacity .6s";
+    im.style.left = to.x + "px"; im.style.top = to.y + "px"; im.style.transform = "translate(-50%,-50%) scale(.34)"; im.style.opacity = ".15";
+  }, 620);
+  setTimeout(() => { im.remove(); flashNewCell(toSel, "120,225,255"); }, 1280);
+}
+
+// Karte legen: hebt von der Hand ab, schwebt hoch ueber die Flaeche zum Bauplatz
+// und setzt dort verdeckt auf (kein flaches Rutschen).
 function flyCardToSlot(card) {
   return new Promise(res => {
     if (!fxOn() || !card) return res();
@@ -180,17 +201,18 @@ function flyCardToSlot(card) {
     const r = src.getBoundingClientRect(), t = slot.getBoundingClientRect();
     if (!r.width || !t.width) return res();
     const g = document.createElement("div");
-    g.className = "flycard";
+    g.className = "flycard hover";
     g.style.backgroundImage = `url("${card.img}")`;
     g.style.left = r.left + "px"; g.style.top = r.top + "px";
     g.style.width = r.width + "px"; g.style.height = r.height + "px";
     document.body.appendChild(g);
     src.style.visibility = "hidden";
-    requestAnimationFrame(() => {
+    requestAnimationFrame(() => {            // Ziel-Position/-Groesse; das Abheben macht die CSS-Animation
       g.style.left = t.left + "px"; g.style.top = t.top + "px";
       g.style.width = t.width + "px"; g.style.height = t.height + "px";
     });
-    setTimeout(() => { g.style.backgroundImage = `url("${CARD_BACK}")`; }, 500);  // dreht sich verdeckt
+    setTimeout(() => { g.style.backgroundImage = `url("${CARD_BACK}")`; }, 640);  // dreht sich beim Aufsetzen verdeckt
+    setTimeout(() => { g.classList.add("land"); }, 800);                          // kurzes Aufsetzen
     setTimeout(() => { g.remove(); res(); }, 1000);
   });
 }
@@ -295,10 +317,47 @@ let introVid = null;
     const app = $("#app");
     if (app && app.parentNode && app.parentNode.insertBefore) app.parentNode.insertBefore(wrap, app);
     else document.body.appendChild(wrap);
-    introVid = v;
-    playIntro();
+    introVid = v;   // Loop wird erst NACH dem Intro-Splash gestartet (sonst kaempfen 2 Videos)
   } catch (e) { /* headless o.ae.: egal */ }
 })();
+
+// Erster Start pro Sitzung: Intro EINMAL als Vollbild-Splash zeigen (Menue erst danach,
+// nichts liegt darueber). Danach uebernimmt der Menue-Hintergrund-Loop.
+(() => {
+  try {
+    if (typeof requestAnimationFrame !== "function") return;                 // headless: kein Splash
+    if (typeof sessionStorage !== "undefined" && sessionStorage.getItem("kosmoIntroSeen")) { playIntro(); return; }
+    const sp = document.createElement("div"); sp.id = "introsplash";
+    const v = document.createElement("video");
+    v.src = "assets/intro.mp4"; v.autoplay = true; v.muted = true; v.playsInline = true; v.preload = "auto";
+    if (v.setAttribute) { v.setAttribute("playsinline", ""); v.setAttribute("muted", ""); }
+    const skip = document.createElement("button"); skip.id = "introskip"; skip.textContent = "Überspringen ▸";
+    const snd = document.createElement("div"); snd.id = "introsound"; snd.textContent = "🔊 Antippen für Ton";
+    sp.appendChild(v); sp.appendChild(skip); sp.appendChild(snd);
+    (document.body || document.documentElement).appendChild(sp);
+    let done = false;
+    const end = (grund) => {
+      window.__splashLog = (window.__splashLog || []).concat(grund || "?");
+      if (done) return; done = true;
+      try { sessionStorage.setItem("kosmoIntroSeen", "1"); } catch (e) {}
+      sp.classList.add("gone"); setTimeout(() => sp.remove && sp.remove(), 520);
+      playIntro();                                                           // Menue-Loop sicher starten
+    };
+    v.addEventListener("ended", () => end("ended"));
+    v.addEventListener("error", () => end("error:" + (v.error && v.error.code)));
+    v.addEventListener("loadedmetadata", () => {                             // praezise am Videoende beenden
+      if (v.duration && isFinite(v.duration)) setTimeout(() => end("dur"), v.duration * 1000 + 250);
+    });
+    skip.addEventListener("click", e => { e.stopPropagation(); end("skip"); });
+    // Tippen aufs Video: Ton dazuschalten (Browser erlaubt das nur per Geste). Nicht abbrechen.
+    sp.addEventListener("click", () => {
+      if (v.muted) { v.muted = false; const q = v.play && v.play(); if (q && q.catch) q.catch(() => {}); snd.classList.add("gone"); }
+    });
+    const p = v.play(); if (p && p.catch) p.catch(() => {});                 // Abbruch NICHT als Ende werten
+    setTimeout(() => end("timeout"), 15000);                                 // ultimatives Sicherheitsnetz
+  } catch (e) {}
+})();
+
 function playIntro() { if (!introVid || !introVid.play) return; const p = introVid.play(); if (p && p.catch) p.catch(() => {}); }
 function backToMenu() {
   $("#table").classList.add("hidden"); $("#menu").classList.remove("hidden");
@@ -348,15 +407,23 @@ function cardEl(card, { back = false, small = false } = {}) {
   return d;
 }
 
+// Anzeige beruecksichtigt die bereits getroffene (aber erst beim Aufdecken verrechnete) Wahl:
+// bezahlter Treibstoff/Batterie verschwindet sofort aus dem Zaehler, die gespielte Karte
+// verlaesst die Hand. Nur fuer die eigene Seite — beim Gegner wuerde das die Wahl verraten.
+function pendPlayUid(p) { const t = p.pending && p.pending.type; return (t === "build" || t === "booster" || t === "tow") ? p.pending.uid : null; }
+function dispFuel(p) { if (p.pending && p.pending.type === "build") { const c = game.handCard(p, p.pending.uid); if (c) return Math.max(0, p.fuel - c.cost); } return p.fuel; }
+function dispBat(p) { return (p.pending && p.pending.type === "build" && p.pending.turbo && p.bat > 0) ? Math.max(0, p.bat - 1) : p.bat; }
+
 function renderBoard() {
   const me = game.players[persp], op = game.players[1 - persp];
   // Info
   const meA = $("#meArea"), opA = $("#oppArea");
   meA.querySelector(".pname").textContent = me.name;
   opA.querySelector(".pname").textContent = op.name;
-  for (const [area, p] of [[meA, me], [opA, op]]) {
-    area.querySelector(".tank").innerHTML = gauge("assets/kanister.png", p.fuel, TANK_MAX);
-    area.querySelector(".batt").innerHTML = gauge("assets/batterie.png", p.bat, BAT_MAX);
+  for (const [area, p, isMe] of [[meA, me, true], [opA, op, false]]) {
+    const f = isMe ? dispFuel(p) : p.fuel, b = isMe ? dispBat(p) : p.bat;
+    area.querySelector(".tank").innerHTML = gauge("assets/kanister.png", f, TANK_MAX);
+    area.querySelector(".batt").innerHTML = gauge("assets/batterie.png", b, BAT_MAX);
     area.querySelector(".crystals").innerHTML = gauge("assets/kristall.png", p.crystals, game.opts.target, true) + `<b>${p.crystals}/${game.opts.target}</b>`;
     area.querySelector(".batt").style.display = game.opts.modules >= 2 ? "" : "none";
   }
@@ -412,7 +479,8 @@ function slotShow(el, card, turbo) {
 }
 
 let selUid = null;
-let lastHandSig = "";
+let lastHandSet = new Set();
+let lastHandOwner = -1;
 
 // Tippen -> Aktionsmenue; Ziehen auf den eigenen Bauplatz -> direkt bauen/ausspielen.
 function attachPlay(el, card) {
@@ -447,17 +515,19 @@ function renderHand() {
   const row = $("#meArea .mehand"); row.innerHTML = ""; row.classList.add("hand");
   const canAct = acting && game.needsCommit(persp) && !game.needsIncome(persp);
   const affordableBuild = canAct && !me.slot;
-  const n = me.hand.length, mid = (n - 1) / 2;
-  const sig = persp + ":" + me.hand.map(c => c.uid).join(",");
-  const dealNow = sig !== lastHandSig; lastHandSig = sig;
-  me.hand.forEach((card, idx) => {
+  const hideUid = pendPlayUid(me);                 // schon gespielte Karte nicht mehr in der Hand zeigen
+  const cards = me.hand.filter(c => c.uid !== hideUid);
+  const n = cards.length, mid = (n - 1) / 2;
+  const curSet = new Set(cards.map(c => c.uid));   // Deal-Animation nur fuer wirklich neue Karten (nicht beim Ablegen)
+  const sameOwner = lastHandOwner === persp;
+  cards.forEach((card, idx) => {
     const wrap = document.createElement("div"); wrap.className = "handcard";
     const rot = (idx - mid) * 3.4, lift = Math.abs(idx - mid) * 7;
     wrap.style.setProperty("--rot", rot + "deg");
     wrap.style.transform = `rotate(${rot}deg) translateY(${lift}px)`;
     const el = cardEl(card);
     el.dataset.uid = card.uid;                 // damit die Karte beim Legen wiedergefunden wird
-    if (dealNow) { el.classList.add("deal"); el.style.setProperty("--i", idx); }
+    if (!sameOwner || !lastHandSet.has(card.uid)) { el.classList.add("deal"); el.style.setProperty("--i", idx); }
     const playableMachine = card.kraft && card.cost <= me.fuel && affordableBuild;
     const playableSpecial = (card.kind === "booster" || card.kind === "tow") && affordableBuild;
     if (canAct && (playableMachine || playableSpecial)) {
@@ -469,6 +539,7 @@ function renderHand() {
     }
     wrap.appendChild(el); row.appendChild(wrap);
   });
+  lastHandSet = curSet; lastHandOwner = persp;
 }
 
 // ---------- Aktionsleiste ----------
@@ -575,10 +646,11 @@ function promptIncome(human) {
     </div>`);
   const pick = async k => {
     game.setIncome(human.idx, k); hideOverlay();
+    renderBoard();            // die Ressource ist schon da -> Anzeige zeigt sie
     const sel = k === "bat" ? "#meArea .batt" : "#meArea .tank";
+    // das ankommende Symbol laesst die neu gefuellte Zelle deutlich aufpoppen
     flyToken(k === "bat" ? "assets/batterie.png" : "assets/kanister.png", sel, centerOf("#centerMsg"));
-    await sleep(1000);        // die Anzeige fuellt sich erst, wenn das Symbol ankommt
-    renderBoard();
+    await sleep(760);
     promptCommit(human);
   };
   $("#inFuel").onclick = () => pick("fuel");
@@ -608,15 +680,12 @@ async function doCommit(action) {
   clearActions(); selUid = null;
   const card = action.uid != null ? game.handCard(game.players[persp], action.uid) : null;
   if (card) {
-    await flyCardToSlot(card);          // ~1 s: Karte fliegt auf den Bauplatz
+    await flyCardToSlot(card);          // ~1 s: Karte schwebt auf den Bauplatz
     Snd.place();                        // Ton beim Aufsetzen, nicht beim Klick
   } else if (action.type === "repair") Snd.place();
   else Snd.click();
-  if (action.type === "booster" && card) {
-    flyToken(card.gives === "bat" ? "assets/batterie.png" : "assets/kanister.png",
-      card.gives === "bat" ? "#meArea .batt" : "#meArea .tank", centerOf("#meSlot"));
-  }
   game.commit(persp, action);
+  renderBoard();                        // Bezahlung sofort sichtbar: Kanister/Batterie runter, Karte aus der Hand
   advance();
 }
 
@@ -718,12 +787,12 @@ async function revealAndResolve() {
     FX.ring(gap.x, gap.y, "87,208,232", 10);
     await sleep(380);
     Snd.score();
-    FX.sparkle(sc.x, sc.y, "120,225,255", 26); FX.ring(sc.x, sc.y, "87,208,232", 8);
-    floatText(sc.x + 92, sc.y, "+1 ◆", "#8cebff", true);
-    flyToken("assets/kristall.png", meScored ? "#meArea .crystals" : "#oppArea .crystals", gap);
-    flash(`${game.players[score.i].name} kommt durch — ◆ +1 Kristall`);
+    // Grosser Kristall poppt an der Luecke auf und wandert dann in den Zaehler
+    bigCrystalPop(gap.x, gap.y, meScored ? "#meArea .crystals" : "#oppArea .crystals");
+    floatText(sc.x + 96, sc.y, "+1", "#8cebff", true);
+    flash(`${game.players[score.i].name} kommt durch — ein Kristall!`);
     pulseCrystals(score.i);
-    await sleep(300);
+    await sleep(760);
     if (el) el.classList.remove("through");
   } else if (!towed) {
     flash("Nichts passiert");
@@ -754,16 +823,46 @@ function showSlotReveal(el, d) {
 }
 function markSlot(sel, cls) { const c = $(sel).querySelector(".card"); if (c) c.classList.add(cls); }
 
+// Vollbild-Videosequenz (Intro/Sieg/Niederlage). Stumm-Autoplay + Tippen fuer Ton + Weiter.
+// Fehlt die Datei, geht es sofort weiter (onDone) -> App laeuft auch ohne Videos.
+function playFullscreenVideo(src, onDone) {
+  let called = false; const go = () => { if (called) return; called = true; try { onDone(); } catch (e) {} };
+  if (!fxOn()) return go();
+  const sp = document.createElement("div"); sp.className = "fsvideo";
+  const v = document.createElement("video");
+  v.src = src; v.autoplay = true; v.muted = true; v.playsInline = true; v.preload = "auto";
+  if (v.setAttribute) { v.setAttribute("playsinline", ""); v.setAttribute("muted", ""); }
+  const skip = document.createElement("button"); skip.className = "fsskip"; skip.textContent = "Weiter ▸";
+  const snd = document.createElement("div"); snd.className = "fssound"; snd.textContent = "🔊 Antippen für Ton";
+  sp.appendChild(v); sp.appendChild(skip); sp.appendChild(snd);
+  document.body.appendChild(sp);
+  let done = false;
+  const end = () => { if (done) return; done = true; sp.classList.add("gone"); setTimeout(() => sp.remove && sp.remove(), 450); go(); };
+  v.addEventListener("ended", end);
+  v.addEventListener("error", end);
+  v.addEventListener("loadedmetadata", () => { if (v.duration && isFinite(v.duration)) setTimeout(end, v.duration * 1000 + 250); });
+  skip.addEventListener("click", e => { e.stopPropagation(); end(); });
+  sp.addEventListener("click", () => { if (v.muted) { v.muted = false; const q = v.play && v.play(); if (q && q.catch) q.catch(() => {}); snd.classList.add("gone"); } });
+  const p = v.play(); if (p && p.catch) p.catch(() => {});
+  setTimeout(end, 15000);
+}
+
 function winScreen() {
   const w = game.players[game.winner];
   const humanWon = !w.isAI;
-  FX.rain(); FX.burst(innerWidth / 2, innerHeight / 2, "255,207,63", 60, { spread: 14, g: 0.12 }); shake(1.4);
-  humanWon ? Snd.win() : Snd.lose();
-  showOverlay(`<div class="winbanner">🏆 ${w.name} ${w.name === "Du" ? "gewinnst" : "gewinnt"}!</div>
-    <div class="wingems">${"◆".repeat(w.crystals)}</div>
-    <p>${w.crystals} Kristalle gesammelt in ${game.round} Runden.</p>
-    <button class="big" id="againBtn">Nochmal</button>
-    <button class="big" id="menu2" style="background:#131a30;color:#cfe;margin-top:10px">Menü</button>`);
-  $("#againBtn").onclick = () => { Snd.click(); startGame(); };
-  $("#menu2").onclick = () => { Snd.click(); hideOverlay(); backToMenu(); };
+  const show = () => {
+    FX.rain(); FX.burst(innerWidth / 2, innerHeight / 2, "255,207,63", 60, { spread: 14, g: 0.12 }); shake(1.4);
+    humanWon ? Snd.win() : Snd.lose();
+    showOverlay(`<div class="winbanner">🏆 ${w.name} ${w.name === "Du" ? "gewinnst" : "gewinnt"}!</div>
+      <div class="wingems">${"◆".repeat(w.crystals)}</div>
+      <p>${w.crystals} Kristalle gesammelt in ${game.round} Runden.</p>
+      <button class="big" id="againBtn">Nochmal</button>
+      <button class="big" id="menu2" style="background:#131a30;color:#cfe;margin-top:10px">Menü</button>`);
+    $("#againBtn").onclick = () => { Snd.click(); startGame(); };
+    $("#menu2").onclick = () => { Snd.click(); hideOverlay(); backToMenu(); };
+  };
+  // Sieg: Vollbild-Sequenz, dann Ergebnis. Niederlage: vorerst direkt Ergebnis
+  // (gutes Lose-Video kommt, sobald Veo-Tageslimit frei ist -> dann hier "assets/lose.mp4").
+  if (humanWon) playFullscreenVideo("assets/win.mp4", show);
+  else show();
 }
