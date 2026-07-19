@@ -330,8 +330,8 @@ let introVid = null;
     if (typeof sessionStorage !== "undefined" && sessionStorage.getItem("kosmoIntroSeen")) { playIntro(); return; }
     const sp = document.createElement("div"); sp.id = "introsplash";
     const v = document.createElement("video");
-    v.src = "assets/intro.mp4"; v.autoplay = true; v.muted = true; v.playsInline = true; v.preload = "auto";
-    if (v.setAttribute) { v.setAttribute("playsinline", ""); v.setAttribute("muted", ""); }
+    v.src = "assets/intro.mp4"; v.autoplay = true; v.muted = false; v.playsInline = true; v.preload = "auto";
+    if (v.setAttribute) v.setAttribute("playsinline", "");
     const skip = document.createElement("button"); skip.id = "introskip"; skip.textContent = "Überspringen ▸";
     const snd = document.createElement("div"); snd.id = "introsound"; snd.textContent = "🔊 Antippen für Ton";
     sp.appendChild(v); sp.appendChild(skip); sp.appendChild(snd);
@@ -354,7 +354,10 @@ let introVid = null;
     sp.addEventListener("click", () => {
       if (v.muted) { v.muted = false; const q = v.play && v.play(); if (q && q.catch) q.catch(() => {}); snd.classList.add("gone"); }
     });
-    const p = v.play(); if (p && p.catch) p.catch(() => {});                 // Abbruch NICHT als Ende werten
+    // Erst MIT Ton versuchen; blockt der Browser (kein Nutzer-Gest beim ersten Start), stumm + Pille.
+    const p = v.play();
+    if (p && p.then) p.then(() => { snd.classList.add("gone"); })
+      .catch(() => { v.muted = true; const q = v.play && v.play(); if (q && q.catch) q.catch(() => {}); });
     setTimeout(() => end("timeout"), 15000);                                 // ultimatives Sicherheitsnetz
   } catch (e) {}
 })();
@@ -884,8 +887,10 @@ function playFullscreenVideo(src, onDone) {
   if (!fxOn()) return go();
   const sp = document.createElement("div"); sp.className = "fsvideo";
   const v = document.createElement("video");
-  v.src = src; v.autoplay = true; v.muted = true; v.playsInline = true; v.preload = "auto";
-  if (v.setAttribute) { v.setAttribute("playsinline", ""); v.setAttribute("muted", ""); }
+  // Sieg/Niederlage laufen NACH Nutzer-Interaktion -> Ton-Autoplay ist erlaubt. Erst MIT Ton
+  // versuchen; falls der Browser blockt, stumm weiterlaufen und "Antippen fuer Ton" zeigen.
+  v.src = src; v.autoplay = true; v.muted = false; v.playsInline = true; v.preload = "auto";
+  if (v.setAttribute) v.setAttribute("playsinline", "");
   const skip = document.createElement("button"); skip.className = "fsskip"; skip.textContent = "Weiter ▸";
   const snd = document.createElement("div"); snd.className = "fssound"; snd.textContent = "🔊 Antippen für Ton";
   sp.appendChild(v); sp.appendChild(skip); sp.appendChild(snd);
@@ -897,7 +902,9 @@ function playFullscreenVideo(src, onDone) {
   v.addEventListener("loadedmetadata", () => { if (v.duration && isFinite(v.duration)) setTimeout(end, v.duration * 1000 + 250); });
   skip.addEventListener("click", e => { e.stopPropagation(); end(); });
   sp.addEventListener("click", () => { if (v.muted) { v.muted = false; const q = v.play && v.play(); if (q && q.catch) q.catch(() => {}); snd.classList.add("gone"); } });
-  const p = v.play(); if (p && p.catch) p.catch(() => {});
+  const p = v.play();
+  if (p && p.then) p.then(() => { snd.classList.add("gone"); })   // Ton laeuft -> Pille weg
+    .catch(() => { v.muted = true; const q = v.play && v.play(); if (q && q.catch) q.catch(() => {}); }); // blockiert -> stumm, Pille bleibt
   setTimeout(end, 15000);
 }
 
