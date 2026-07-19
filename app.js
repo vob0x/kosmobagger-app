@@ -271,8 +271,9 @@ $("#startBtn").addEventListener("click", () => { Snd.resume(); Snd.click(); star
 
 // Stummschalter (dynamisch, unten rechts)
 const muteBtn = document.createElement("button");
-muteBtn.id = "muteBtn"; muteBtn.textContent = "🔊"; muteBtn.title = "Ton an/aus";
-muteBtn.addEventListener("click", () => { const m = Snd.toggle(); muteBtn.textContent = m ? "🔇" : "🔊"; });
+muteBtn.id = "muteBtn"; muteBtn.title = "Ton an/aus"; muteBtn.setAttribute("aria-label", "Ton an/aus");
+muteBtn.innerHTML = `<img class="chromeicon" src="assets/icons/sound.png" alt="">`;
+muteBtn.addEventListener("click", () => { const m = Snd.toggle(); muteBtn.classList.toggle("muted", m); });
 $("#table").appendChild(muteBtn);
 FX.start();   // Sternenfeld auch hinter dem Menue
 
@@ -550,16 +551,19 @@ function addBtn(label, fn, ghost) {
 }
 
 // Piktogramme im Artwork-Stil (kraeftig, dicke runde Formen) — die Zielgruppe kann noch nicht lesen.
+// LLM-generierte Artwork-Icons (flach, dicke Konturen, wie die Karten) — freigestellt.
 const ICON = {
-  build: `<svg class="psvg" viewBox="0 0 48 48" aria-hidden="true"><rect x="5" y="33" width="29" height="9" rx="4.5" fill="#fff"/><rect x="9" y="35.5" width="21" height="2.3" rx="1.15" fill="#2a7d49"/><rect x="12" y="20" width="15" height="13" rx="3" fill="#fff"/><path d="M25 23l9-6 4.5 6.5" fill="none" stroke="#fff" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M38.5 23.5c-1.2 5 1.8 7.6 6 6.3l-1.2-4.3" fill="none" stroke="#fff" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-  wrench: `<svg class="psvg" viewBox="0 0 48 48" aria-hidden="true"><path d="M34 6.5a10 10 0 00-11.6 12.9L7.7 34a4.3 4.3 0 106.1 6.1l14.6-14.6A10 10 0 0041.5 14l-6.4 6.4-4.9-1-1-4.9L35.6 8z" fill="#fff"/></svg>`,
-  hook: `<svg class="psvg" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="9" r="4.6" fill="none" stroke="#fff" stroke-width="4"/><path d="M24 14v12a8.5 8.5 0 11-8.5 8.5" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/></svg>`,
-  back: `<svg class="psvg" viewBox="0 0 48 48" aria-hidden="true"><path d="M29 9L15 24l14 15" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-  again: `<svg class="psvg" viewBox="0 0 48 48" aria-hidden="true"><path d="M39 24a15 15 0 10-4.6 10.8" fill="none" stroke="#fff" stroke-width="5.5" stroke-linecap="round"/><path d="M39 9v11H28" fill="none" stroke="#fff" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-  home: `<svg class="psvg" viewBox="0 0 48 48" aria-hidden="true"><path d="M6 25L24 9l18 16" fill="none" stroke="#fff" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/><rect x="12" y="23" width="24" height="17" rx="2.5" fill="#fff"/><rect x="20" y="30" width="8" height="10" rx="1.5" fill="#1a2447"/></svg>`,
-  plus: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#39c26a" stroke="#0f2e1c" stroke-width="1.6"/><path d="M12 6v12M6 12h12" stroke="#fff" stroke-width="3.2" stroke-linecap="round"/></svg>`,
-  keep: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#5aa0e6" stroke="#12294a" stroke-width="1.6"/><path d="M7 14l5-5 5 5" fill="none" stroke="#fff" stroke-width="2.9" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-  bolt: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#1a2138" stroke="#0b1024" stroke-width="1.4"/><path d="M13.5 4L7 13.5h4L9.5 20l7.5-9.5h-5L13.5 4z" fill="#ffd23f"/></svg>`
+  build:  `<img class="psvg" src="assets/icons/build.png" alt="">`,
+  turbo:  `<img class="psvg" src="assets/icons/turbo.png" alt="">`,
+  save:   `<img class="psvg" src="assets/icons/save.png" alt="">`,
+  repair: `<img class="psvg" src="assets/icons/repair.png" alt="">`,
+  tow:    `<img class="psvg" src="assets/icons/tow.png" alt="">`,
+  back:   `<img class="psvg" src="assets/icons/back.png" alt="">`,
+  again:  `<img class="psvg" src="assets/icons/replay.png" alt="">`,
+  home:   `<img class="psvg" src="assets/icons/home.png" alt="">`,
+  sound:  `<img class="psvg" src="assets/icons/sound.png" alt="">`,
+  // kleines "+"-Abzeichen fuer Booster/Nachschub (bleibt Vektor)
+  plus: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#39c26a" stroke="#0f2e1c" stroke-width="1.6"/><path d="M12 6v12M6 12h12" stroke="#fff" stroke-width="3.2" stroke-linecap="round"/></svg>`
 };
 function costPips(icon, n) { let s = ""; for (let i = 0; i < Math.min(n, 6); i++) s += `<img class="cpip" src="${icon}" alt="">`; return s; }
 function resImg(icon) { return `<img class="pbig" src="${icon}" alt="">`; }
@@ -583,7 +587,8 @@ function showActions(card) {
     iconBtn({ cls: "pbuild", title: `Bauen (kostet ${card.cost} Kanister)`, icon: ICON.build,
       fn: () => doCommit({ type: "build", uid: card.uid, turbo: false }) });
     if (game.opts.modules >= 2 && me.bat > 0)
-      iconBtn({ cls: "pturbo", title: "Bauen mit Turbo — Batterie einsetzen, +2 stärker", icon: ICON.build, badge: ICON.bolt,
+      iconBtn({ cls: "pturbo", title: "Bauen mit Turbo — Batterie einsetzen, +2 stärker", icon: ICON.turbo,
+        cost: costPips("assets/batterie.png", 1),
         fn: () => doCommit({ type: "build", uid: card.uid, turbo: true }) });
   } else if (card.kind === "booster") {
     const img = card.gives === "bat" ? "assets/batterie.png" : "assets/kanister.png";
@@ -592,7 +597,7 @@ function showActions(card) {
   } else if (card.kind === "tow") {
     // Abschleppen ist die Hauptfunktion -> immer zeigen; ohne Gegner-Maschine ausgegraut.
     const hasTarget = !!game.players[1 - persp].slot;
-    iconBtn({ cls: "ptow", disabled: !hasTarget, icon: ICON.hook,
+    iconBtn({ cls: "ptow", disabled: !hasTarget, icon: ICON.tow,
       title: hasTarget ? "Gegner-Maschine abschleppen" : "Abschleppen — gerade keine Gegner-Maschine da",
       fn: () => doCommit({ type: "tow", uid: card.uid, mode: "tow" }) });
     iconBtn({ cls: "pgain", title: "Nachschub: +1 Kanister", icon: resImg("assets/kanister.png"), badge: ICON.plus,
@@ -609,10 +614,10 @@ function baseActions() {
   const me = game.players[persp];
   clearActions();
   if (game.opts.modules >= 2 && me.bat >= 2 && me.garage.some(c => c.kraft))
-    iconBtn({ cls: "prepair", title: "Reparieren — Maschine zurückholen (kostet 2 Batterien)", icon: ICON.wrench,
+    iconBtn({ cls: "prepair", title: "Reparieren — Maschine zurückholen (kostet 2 Batterien)", icon: ICON.repair,
       cost: costPips("assets/batterie.png", 2), fn: () => { Snd.click(); showRepairPick(); } });
   iconBtn({ cls: "psave", ghost: true, title: "Sparen — nichts bauen, Treibstoff behalten und weiter sammeln",
-    icon: resImg("assets/kanister.png"), badge: ICON.keep, fn: () => doCommit({ type: "pass" }) });
+    icon: ICON.save, fn: () => doCommit({ type: "pass" }) });
 }
 
 // Reparieren: Regel sagt "eine beliebige Maschine aus der Garage" -> Spieler waehlt.
