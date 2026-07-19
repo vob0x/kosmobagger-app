@@ -521,11 +521,19 @@ function renderHand() {
   const n = cards.length, mid = (n - 1) / 2;
   const curSet = new Set(cards.map(c => c.uid));   // Deal-Animation nur fuer wirklich neue Karten (nicht beim Ablegen)
   const sameOwner = lastHandOwner === persp;
+  // Damit die Hand (auch mit 4 Karten) immer in die Bildschirmbreite passt: bei Bedarf ueberlappen.
+  const cardW = 128, gap = 8;
+  const vw = (typeof document !== "undefined" && document.documentElement && document.documentElement.clientWidth)
+    || (typeof window !== "undefined" && window.innerWidth) || 390;
+  const total = n * cardW + (n - 1) * gap, avail = Math.max(240, vw - 18);
+  const overlap = (n > 1 && total > avail) ? Math.ceil((total - avail) / (n - 1)) : 0;
   cards.forEach((card, idx) => {
     const wrap = document.createElement("div"); wrap.className = "handcard";
     const rot = (idx - mid) * 3.4, lift = Math.abs(idx - mid) * 7;
     wrap.style.setProperty("--rot", rot + "deg");
     wrap.style.transform = `rotate(${rot}deg) translateY(${lift}px)`;
+    if (idx > 0 && overlap > 0) wrap.style.marginLeft = -overlap + "px";
+    if (selUid === card.uid) wrap.style.zIndex = "12";
     const el = cardEl(card);
     el.dataset.uid = card.uid;                 // damit die Karte beim Legen wiedergefunden wird
     if (!sameOwner || !lastHandSet.has(card.uid)) { el.classList.add("deal"); el.style.setProperty("--i", idx); }
