@@ -60,6 +60,15 @@ body{
 .side.me{border-top:1px solid var(--line);background:rgba(10,15,30,.5)}
 .pinfo{display:flex;align-items:center;gap:16px;font-size:15px}
 .pname{font-weight:700;min-width:120px}
+/* Gegnerzeile: rechts Platz lassen, damit der Kristallzähler nicht unter Menü-/Ton-Knopf rutscht.
+   Kompakt gehalten (kleinere Gauges/Pips, keine "X/5"-Zahl) -> passt auch auf schmale Handys. */
+#oppArea .pinfo{padding-right:68px;gap:6px}
+#oppArea .pname{min-width:0;font-size:13px}
+#oppArea .crystals b{display:none}
+#oppArea .crystals{gap:2px}
+#oppArea .res{background:none;border:0;padding:0;font-size:12px;gap:2px}
+#oppArea .res b{font-size:12px}
+#oppArea .crystals .cell,#oppArea .crystals .cell img{width:14px;height:14px}
 .res{background:#0e1730;border:1px solid var(--line);border-radius:20px;padding:3px 12px;display:inline-flex;align-items:center;gap:6px}
 .res b{font-size:16px}
 .pips{display:inline-flex;gap:3px;margin-left:4px}
@@ -112,8 +121,8 @@ body{
 #actionbar button.ghost:not(.pbtn){background:#131a30;border-color:var(--line);color:var(--dim)}
 #actionbar button:not(.pbtn):hover{filter:brightness(1.08)}
 
-#menuBtn{position:absolute;top:8px;right:10px;z-index:30;background:#131a30;color:var(--ink);
-  border:1px solid var(--line);border-radius:9px;width:36px;height:32px;cursor:pointer;font-size:16px}
+#menuBtn{position:absolute;top:8px;right:8px;z-index:30;background:#131a30;color:var(--ink);
+  border:1px solid var(--line);border-radius:9px;width:32px;height:30px;cursor:pointer;font-size:15px}
 
 /* ---------- Overlay ---------- */
 #overlay{position:absolute;inset:0;background:rgba(5,8,18,.72);backdrop-filter:blur(4px);
@@ -146,8 +155,8 @@ canvas.confetti{position:fixed;inset:0;z-index:60;pointer-events:none}
 .slot .card.reveal{animation:dropflip .5s ease}
 @keyframes dropflip{0%{transform:translateY(-46px) rotateX(55deg) scale(.9);opacity:.15}100%{transform:none;opacity:1}}
 
-#muteBtn{position:absolute;top:8px;right:52px;z-index:30;background:#131a30;color:var(--ink);
-  border:1px solid var(--line);border-radius:9px;width:36px;height:32px;cursor:pointer;font-size:15px}
+#muteBtn{position:absolute;top:8px;right:44px;z-index:30;background:#131a30;color:var(--ink);
+  border:1px solid var(--line);border-radius:9px;width:32px;height:30px;cursor:pointer;font-size:14px}
 
 /* ============ v2: kosmisch-industrieller Look ============ */
 #bg{position:fixed;inset:0;z-index:-1;pointer-events:none}
@@ -316,7 +325,7 @@ body{background:radial-gradient(1200px 820px at 50% -18%, #1b2648 0%, #0b1022 55
 
 /* Erster Start: Intro als Vollbild-Splash ueber allem, Menue erst danach */
 #introsplash{position:fixed;inset:0;z-index:200;background:#05070f;display:flex;align-items:center;justify-content:center;transition:opacity .5s ease}
-#introsplash video{width:100%;height:100%;object-fit:cover}
+#introsplash video{width:100%;height:100%;object-fit:contain}
 #introsplash.gone{opacity:0;pointer-events:none}
 #introskip{position:absolute;right:20px;bottom:18px;z-index:2;background:rgba(18,26,48,.82);color:#e8ecf5;
   border:1px solid rgba(150,180,240,.45);border-radius:13px;padding:12px 20px;font-size:16px;font-weight:700;cursor:pointer;
@@ -324,7 +333,7 @@ body{background:radial-gradient(1200px 820px at 50% -18%, #1b2648 0%, #0b1022 55
 #introskip:hover{background:rgba(30,40,70,.92)}
 /* Vollbild-Videosequenz (Sieg/Niederlage) — gleiche Optik wie der Intro-Splash */
 .fsvideo{position:fixed;inset:0;z-index:210;background:#05070f;display:flex;align-items:center;justify-content:center;transition:opacity .45s ease}
-.fsvideo video{width:100%;height:100%;object-fit:cover}
+.fsvideo video{width:100%;height:100%;object-fit:contain}
 .fsvideo.gone{opacity:0;pointer-events:none}
 .fsskip{position:absolute;right:20px;bottom:18px;z-index:2;background:rgba(18,26,48,.82);color:#e8ecf5;
   border:1px solid rgba(150,180,240,.45);border-radius:13px;padding:12px 20px;font-size:16px;font-weight:700;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.5)}
