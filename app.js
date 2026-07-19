@@ -288,7 +288,8 @@ function tryImg(url, apply) {
   if (typeof Image === "undefined") return;
   const im = new Image(); im.onload = () => apply(url); im.onerror = () => {}; im.src = url;
 }
-tryImg("assets/arena.png", u => {
+// Spielbrett-Buehne: neuer malerischer Arena-Hintergrund im Kartenstil (dunkle ruhige Mitte).
+tryImg("assets/board.png", u => {
   let a = $("#arena"); if (!a) { a = document.createElement("div"); a.id = "arena"; document.body.insertBefore(a, $("#app")); }
   a.style.backgroundImage = `url('${u}')`;
 });
