@@ -988,6 +988,7 @@ async function revealAndResolve() {
   drainFx(ev);   // Modul 3: Brems-Effekte sichtbar machen (Gegner verliert Kanister/Batterie)
   const win = ev.find(e => e.t === "win");
   await sleep(win ? 1900 : 2600);   // Zahlen/Kristall stehen ~2,2 s -> Ergebnis nicht vorher wegnehmen
+  if (TUT.active) { TUT.afterResolve(ev); return; }   // Tutorial fuehrt selbst weiter
   advance();
 }
 
@@ -1064,3 +1065,133 @@ function winScreen() {
   // Sieg- bzw. Niederlage-Sequenz als Vollbild, danach der Ergebnis-Bildschirm.
   playFullscreenVideo(humanWon ? "assets/win.mp4" : "assets/lose.mp4", show);
 }
+
+// ================= TUTORIAL (gefuehrt, garantierter Sieg) =================
+const Coach = {
+  el: null,
+  clear() { if (this.el && this.el.remove) this.el.remove(); this.el = null; },
+  point(sel, text, onTap) {
+    this.clear();
+    if (typeof document === "undefined" || !document.createElement) { onTap && onTap(); return; }
+    const c = document.createElement("div"); c.className = "coach";
+    let ring = "";
+    const t = sel && document.querySelector(sel);
+    if (t && t.getBoundingClientRect) {
+      const r = t.getBoundingClientRect();
+      if (r.width) ring = `<div class="coachring" style="left:${r.left - 10}px;top:${r.top - 10}px;width:${r.width + 20}px;height:${r.height + 20}px"></div>`
+        + `<div class="coachhand" style="left:${r.left + r.width / 2 - 20}px;top:${r.top + r.height + 4}px">👆</div>`;
+    }
+    c.innerHTML = ring + `<div class="coachbubble"><div class="coachtext">${text}</div><div class="coachtap">✔ tippen</div></div>`;
+    if (document.body) document.body.appendChild(c);
+    const go = () => { if (this.el !== c) return; if (Snd.click) Snd.click(); this.clear(); onTap && onTap(); };
+    c.addEventListener("click", go);
+    this.el = c;
+  },
+  say(text, onTap) { this.point(null, text, onTap); },
+};
+
+const TUT = {
+  active: false,
+  seen() { try { return !!localStorage.getItem("kb_tut_seen"); } catch (e) { return false; } },
+  done() { try { localStorage.setItem("kb_tut_seen", "1"); } catch (e) {} },
+  start() { this.showPanels(() => this.play()); },
+  offer() {
+    showOverlay(`<div class="tutoffer"><h2>🎓 Neu hier?</h2><p>Sollen wir zusammen eine kurze Übungsrunde spielen?</p>
+      <div class="tutofferbtns">
+        <button class="big" id="tofferYes">Ja, zeig mir! ▶</button>
+        <button class="big ghostbtn" id="tofferNo">Später</button>
+      </div></div>`);
+    $("#tofferYes").onclick = () => { Snd.click(); hideOverlay(); TUT.start(); };
+    $("#tofferNo").onclick = () => { Snd.click(); hideOverlay(); TUT.done(); };
+  },
+  // ---- illustrierte Kurzregeln ----
+  showPanels(onDone) {
+    const P = [
+      { img: "assets/hero.png", t: "Zwei Maschinen treten gegeneinander an. 🤖🚚" },
+      { img: "assets/kanister.png", t: "Jede Runde bekommst du einen Kanister ⛽ — damit baust du Maschinen." },
+      { img: "assets/kristall.png", t: "Beim Aufdecken gewinnt die <b>größere Zahl</b>." },
+      { img: "assets/kristall.png", t: "Die Siegermaschine <b>bleibt stehen</b> und fördert einen Kristall ⬦." },
+      { img: "assets/kristall.png", t: "Wer zuerst genug Kristalle hat, <b>gewinnt</b>! 🏆" },
+    ];
+    let i = 0;
+    const render = () => {
+      const p = P[i], last = i === P.length - 1;
+      showOverlay(`<div class="tutpanel">
+        <div class="tutimg" style="background-image:url('${p.img}')"></div>
+        <div class="tuttext">${p.t}</div>
+        <div class="tutnav">
+          ${i > 0 ? `<button class="tutround" id="tp">‹</button>` : `<span class="tutround ghost"></span>`}
+          <div class="tutdots">${P.map((_, k) => `<i class="${k === i ? "on" : ""}"></i>`).join("")}</div>
+          <button class="big tutnext" id="tn">${last ? "Los geht's! ▶" : "Weiter ›"}</button>
+        </div>
+        <div class="tutfoot"><button class="tutlink" id="tposter">📖 Alle Regeln</button><button class="tutlink" id="tskip">Überspringen</button></div>
+      </div>`);
+      $("#tn").onclick = () => { Snd.click(); if (last) { hideOverlay(); onDone(); } else { i++; render(); } };
+      if ($("#tp")) $("#tp").onclick = () => { Snd.click(); i--; render(); };
+      $("#tposter").onclick = () => { Snd.click(); TUT.showPoster(); };
+      $("#tskip").onclick = () => { Snd.click(); hideOverlay(); TUT.done(); backToMenu(); };
+    };
+    render();
+  },
+  showPoster() {
+    const o = document.createElement("div"); o.className = "posterview";
+    o.innerHTML = `<img src="assets/kurzregeln.png" alt="Regeln"><button class="posterclose" aria-label="Schließen">✕</button>`;
+    o.addEventListener("click", () => o.remove());
+    document.body.appendChild(o);
+  },
+  // ---- gefuehrtes Spiel (Modul 1, Ziel 2, gerigt) ----
+  play() {
+    $("#menu").classList.add("hidden"); hideOverlay();
+    $("#table").classList.remove("hidden");
+    if (document.body && document.body.classList) document.body.classList.add("playing");
+    if (introVid && introVid.pause) introVid.pause();
+    FX.start();
+    ["oppDeck", "meDeck"].forEach(id => { if (!$("#" + id)) { const d = document.createElement("div"); d.id = id; d.className = "deckpile"; $("#battle").appendChild(d); } });
+    game = new Game({ modules: 1, target: 2, deckDoubled: true, boosters: 0, tows: 0, names: ["Du", "Computer"], ai: [false, true], aiLevel: 0 });
+    const me = game.players[0], op = game.players[1];
+    const pull = (p, k) => { const idx = p.deck.findIndex(c => c.kraft === k); return idx >= 0 ? p.deck.splice(idx, 1)[0] : p.deck.pop(); };
+    const strong = pull(me, 3), weak = pull(op, 1);   // Spieler stark (Kraft 3), Gegner schwach (Kraft 1)
+    game.round = 1; game.phase = "act";
+    Object.assign(me, { income: "fuel", fuel: 2, bat: 0, crystals: 0, slot: null, slotTurbo: false, pending: null, hand: [strong], deck: [], garage: [] });
+    Object.assign(op, { income: "fuel", fuel: 1, bat: 0, crystals: 0, slot: null, slotTurbo: false, hand: [weak], deck: [], garage: [] });
+    op.pending = { type: "build", uid: weak.uid, turbo: false };   // Gegner baut Runde 1 eine kleine Maschine
+    game.aiChoose = (p) => { const c = p.hand.find(x => x.kraft && x.cost <= p.fuel); return (game.round <= 1 && c) ? { type: "build", uid: c.uid, turbo: false } : { type: "pass" }; };
+    this.active = true; persp = 0; renderBoard();
+    Coach.say("Willkommen! 👋 Wir spielen zusammen — und du gewinnst. Tipp los!", () => this.round());
+  },
+  round() {
+    persp = 0; renderBoard();
+    const me = game.players[0];
+    if (me.slot) {
+      Coach.point("#meSlot", "Deine Maschine kämpft weiter und holt einen Kristall. Tipp zum Aufdecken!", () => { me.pending = { type: "none" }; TUT.go(); });
+    } else {
+      const card = me.hand.find(c => c.kraft && c.cost <= me.fuel) || me.hand[0];
+      Coach.point("#meArea .mehand .card", "Tipp deine Maschine — sie ist stärker als die des Gegners!", () => { me.pending = { type: "build", uid: card.uid, turbo: false }; TUT.go(); });
+    }
+  },
+  go() { Coach.clear(); revealAndResolve(); },   // Ende wird in revealAndResolve via afterResolve abgefangen
+  afterResolve(ev) {
+    if (ev.find(e => e.t === "win")) return this.finish();
+    const score = ev.find(e => e.t === "score" && e.i === 0);
+    const clash = ev.find(e => e.t === "clash" && e.winner === 0);
+    let msg = "Weiter geht's!";
+    if (score) { const left = game.opts.target - game.players[0].crystals; msg = left > 0 ? `Ein Kristall! ⬦ Noch ${left} bis zum Sieg.` : "Ein Kristall! ⬦"; }
+    else if (clash) msg = "Die größere Zahl gewinnt! 💪 Deine Maschine bleibt stehen.";
+    setTimeout(() => Coach.say(msg, () => this.round()), 250);
+  },
+  finish() {
+    this.active = false; Coach.clear(); this.done();
+    FX.rain(); if (Snd.win) Snd.win(); shake(1.2);
+    showOverlay(`<div class="winbanner">🏆 Geschafft — du hast gewonnen!</div>
+      <p>Jetzt kennst du das Spiel. Viel Spaß! 🚀</p>
+      <div class="incpick" style="margin-top:16px">
+        <button class="pbtn pagain pbig-btn" id="tagain" title="Nochmal lernen" aria-label="Nochmal lernen"><span class="picon">${ICON.again}</span></button>
+        <button class="pbtn phome pghost pbig-btn" id="tmenu" title="Zum Menü" aria-label="Zum Menü"><span class="picon">${ICON.home}</span></button>
+      </div>`);
+    $("#tagain").onclick = () => { Snd.click(); TUT.play(); };
+    $("#tmenu").onclick = () => { Snd.click(); hideOverlay(); backToMenu(); };
+  },
+};
+if ($("#learnBtn")) $("#learnBtn").addEventListener("click", () => { Snd.resume(); Snd.click(); TUT.start(); });
+// Beim allerersten Start das Tutorial anbieten (sobald das Menue sichtbar ist).
+if (!TUT.seen()) setTimeout(() => { if ($("#menu") && !$("#menu").classList.contains("hidden") && (!ov || ov.classList.contains("hidden"))) TUT.offer(); }, 2200);

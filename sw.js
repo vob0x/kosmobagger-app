@@ -1,6 +1,6 @@
 // KOSMOBAGGER PWA Service-Worker.
 // App-Shell NETWORK-FIRST (online aktuell), Medien CACHE-FIRST (offline). Version bei Release erhoehen.
-const CACHE = "kosmobagger-v37";
+const CACHE = "kosmobagger-v38";
 const ASSETS = [
   "./",
   "index.html",
@@ -51,6 +51,7 @@ const ASSETS = [
   "assets/batterie.png",
   "assets/kanister.png",
   "assets/kristall.png",
+  "assets/kurzregeln.png",
   "assets/icons/build.png",
   "assets/icons/turbo.png",
   "assets/icons/save.png",
