@@ -256,22 +256,21 @@ let game = null;
 let persp = 0;          // aus wessen Sicht der Tisch gerade gezeigt wird
 
 // ---------- Freischaltung (im Geraet gespeichert) ----------
-// Modul 2 nach 3 Siegen in Modul 1, Modul 3 nach 5 Siegen in Modul 2 (nur Siege gegen den Computer zaehlen).
+// Modul 1 und 2 sind von Anfang an frei. Modul 3 nach 5 Siegen in Modul 2 (nur Siege gegen den Computer zaehlen).
 const Prog = (() => {
   const KEY = m => "kb_wins_m" + m;
-  const TH = { 2: 3, 3: 5 };
+  const TH = { 3: 5 };
   const get = m => { try { return Math.max(0, +(localStorage.getItem(KEY(m)) || 0) || 0); } catch (e) { return 0; } };
   const set = (m, v) => { try { localStorage.setItem(KEY(m), v); } catch (e) {} };
   return {
     wins: get,
-    unlocked: m => m <= 1 ? true : get(m - 1) >= TH[m],
+    unlocked: m => m <= 2 ? true : get(m - 1) >= TH[m],
     need: m => TH[m] || 0,
     have: m => get(m - 1),
     addWin(m) {                       // gibt neu freigeschaltetes Modul zurueck (oder 0)
       if (m !== 1 && m !== 2) return 0;
-      const b2 = this.unlocked(2), b3 = this.unlocked(3);
+      const b3 = this.unlocked(3);
       set(m, get(m) + 1);
-      if (!b2 && this.unlocked(2)) return 2;
       if (!b3 && this.unlocked(3)) return 3;
       return 0;
     },
