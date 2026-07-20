@@ -524,6 +524,25 @@ body.playing #introwrap{opacity:0}
   #centerMsg{font-size:38px}
 }
 
+/* ================= Redesign-Feinschliff: Leben & Politur ================= */
+/* Stehende Maschine "lebt": sanftes Wippen + pulsierendes Energie-Glühen */
+.slot .card.idle{animation:bob 3.2s ease-in-out infinite, standglow 2.8s ease-in-out infinite}
+@keyframes standglow{
+  0%,100%{box-shadow:0 10px 24px rgba(0,0,0,.5),0 0 0 2px rgba(120,180,255,.22),0 0 20px rgba(80,150,255,.28)}
+  50%{box-shadow:0 12px 30px rgba(0,0,0,.55),0 0 0 2px rgba(150,205,255,.5),0 0 42px rgba(95,175,255,.55)}
+}
+/* Overlays (Einkommen/Sieg/Niederlage) sanft einpoppen */
+#overlay-inner{animation:overlaypop .34s cubic-bezier(.2,1.3,.4,1)}
+@keyframes overlaypop{0%{transform:scale(.86) translateY(8px);opacity:0}100%{transform:scale(1) translateY(0);opacity:1}}
+#overlay{animation:overlayfade .22s ease}
+@keyframes overlayfade{from{opacity:0}to{opacity:1}}
+/* Menue an die neue Buehne angleichen: glueht, premium */
+.menu-box{background:linear-gradient(180deg,rgba(24,33,62,.9),rgba(13,19,40,.93));border-color:rgba(120,150,220,.32);
+  box-shadow:0 34px 90px rgba(0,0,0,.62),0 0 0 1px rgba(255,255,255,.05),0 0 70px rgba(60,110,220,.16)}
+.menu-box h1{filter:drop-shadow(0 3px 10px rgba(0,0,0,.5)) drop-shadow(0 0 26px rgba(255,190,60,.25))}
+.seg button.on{filter:drop-shadow(0 0 10px rgba(74,111,240,.35))}
+.big{filter:drop-shadow(0 0 16px rgba(245,168,28,.3))}
+
 /* ---- Bühnen-Lesbarkeit + wärmeres, glühendes Overlay (Redesign) ---- */
 .side .pname{text-shadow:0 2px 6px rgba(0,0,0,.9)}
 .acthint{color:#e6eeff;text-shadow:0 2px 6px rgba(0,0,0,.85)}
@@ -2084,7 +2103,16 @@ function winScreen() {
 </script>
 <script>
   if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+    // Auto-Update: uebernimmt ein neuer Service-Worker, laedt die App EINMAL neu -> immer aktuelle Version.
+    var hadController = !!navigator.serviceWorker.controller, refreshing = false;
+    navigator.serviceWorker.addEventListener("controllerchange", function () {
+      if (refreshing || !hadController) return; refreshing = true; location.reload();
+    });
+    window.addEventListener("load", function () {
+      navigator.serviceWorker.register("sw.js").then(function (reg) {
+        if (reg && reg.update) setInterval(function () { reg.update(); }, 60 * 60 * 1000); // stuendlich auf Updates pruefen
+      }).catch(function () {});
+    });
   }
 </script>
 </body>

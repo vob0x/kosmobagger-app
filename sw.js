@@ -1,6 +1,6 @@
 // KOSMOBAGGER PWA Service-Worker.
 // App-Shell NETWORK-FIRST (online aktuell), Medien CACHE-FIRST (offline). Version bei Release erhoehen.
-const CACHE = "kosmobagger-v31";
+const CACHE = "kosmobagger-v33";
 const ASSETS = [
   "./",
   "index.html",
@@ -69,7 +69,15 @@ const ASSETS = [
   "assets/sfx/tick.wav",
   "assets/sfx/win.wav"
 ];
-self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting())); });
+// AUSFALLSICHER: einzelne fehlgeschlagene Assets (z. B. ein grosses Video auf langsamer Leitung)
+// duerfen das Update NICHT blockieren. Sonst bleibt die alte Version aktiv -> Videos fehlen.
+self.addEventListener("install", e => {
+  e.waitUntil((async () => {
+    const c = await caches.open(CACHE);
+    await Promise.allSettled(ASSETS.map(a => c.add(a)));   // add pro Asset, Fehler egal
+    await self.skipWaiting();
+  })());
+});
 self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener("fetch", e => {
   const req = e.request; if (req.method !== "GET") return;

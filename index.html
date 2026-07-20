@@ -100,7 +100,16 @@
 <script type="module" src="app.js"></script>
 <script>
   if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+    // Auto-Update: uebernimmt ein neuer Service-Worker, laedt die App EINMAL neu -> immer aktuelle Version.
+    var hadController = !!navigator.serviceWorker.controller, refreshing = false;
+    navigator.serviceWorker.addEventListener("controllerchange", function () {
+      if (refreshing || !hadController) return; refreshing = true; location.reload();
+    });
+    window.addEventListener("load", function () {
+      navigator.serviceWorker.register("sw.js").then(function (reg) {
+        if (reg && reg.update) setInterval(function () { reg.update(); }, 60 * 60 * 1000); // stuendlich auf Updates pruefen
+      }).catch(function () {});
+    });
   }
 </script>
 </body>
