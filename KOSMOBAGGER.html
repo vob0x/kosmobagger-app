@@ -553,6 +553,43 @@ body.playing #introwrap{opacity:0}
 /* Kristallzaehler/Namen leuchten leicht -> heben sich von der hellen Buehne ab */
 .pname{color:#f2f6ff}
 
+/* ==== Modul 3: Weltkraefte ==== */
+/* Menue: das Modul-Segment darf umbrechen (3 Buttons) */
+.seg.segwrap{flex-wrap:wrap}
+/* Welten-Wahl-Screen */
+.worldpicker{max-width:660px;max-height:86vh;overflow:auto}
+.worldpicker h2{margin:0 0 .45em}
+.worldgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.worldpick{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;
+  padding:12px 12px 14px;border-radius:16px;cursor:pointer;text-align:center;
+  background:rgba(12,18,38,.72);border:2.5px solid rgba(255,255,255,.12);color:#eaf0ff;
+  transition:transform .12s ease,border-color .12s ease,box-shadow .12s ease}
+.worldpick:hover{transform:translateY(-2px)}
+.worldpick .wimg{width:100%;height:104px;background-size:cover;background-position:center 26%;border-radius:11px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+.worldpick .wname{font-size:19px;font-weight:800;letter-spacing:.3px}
+.worldpick .wpow{font-size:11.5px;line-height:1.35;color:var(--dim)}
+.worldpick .wpow i{display:block;font-style:normal;font-weight:800;color:var(--wc);margin-bottom:2px;font-size:12.5px}
+.worldpick.on{border-color:var(--wc);box-shadow:0 0 0 2px var(--wc),0 12px 30px rgba(0,0,0,.5),0 0 34px var(--wc)}
+.worldpick.on::after{content:"✓";position:absolute;top:5px;right:9px;font-weight:900;color:#fff;font-size:17px;text-shadow:0 1px 6px rgba(0,0,0,.7)}
+#wpGo[disabled]{opacity:.4;cursor:not-allowed;box-shadow:none;filter:grayscale(.4)}
+/* Welt-Punkte neben dem Spielernamen */
+.wdot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-left:3px;vertical-align:middle;
+  box-shadow:0 0 0 1px rgba(0,0,0,.4),0 0 6px rgba(255,255,255,.25)}
+.side .pname{max-width:138px}
+/* Brems-Blitz auf dem Gegner-Zaehler */
+.drainhit{animation:drainpulse .72s ease}
+@keyframes drainpulse{0%{filter:none;transform:none}22%{filter:drop-shadow(0 0 10px #ff5a5a);transform:scale(1.16)}100%{filter:none;transform:none}}
+
+/* ==== Freischaltung (Module) ==== */
+.seg button.locked{opacity:.5;cursor:not-allowed;color:var(--dim)}
+.seg button.locked small{display:block;font-size:10.5px;opacity:.85;margin-top:1px;font-weight:600}
+.seg button.lockshake{animation:lockshake .4s ease}
+@keyframes lockshake{0%,100%{transform:none}20%{transform:translateX(-5px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}}
+.unlockbanner{margin:12px auto 2px;padding:9px 16px;border-radius:12px;font-weight:800;font-size:17px;
+  color:#0c1022;background:linear-gradient(180deg,#ffe08a,#f5a81c);
+  box-shadow:0 8px 24px rgba(245,168,28,.5);animation:unlockpop .5s cubic-bezier(.2,1.3,.5,1)}
+@keyframes unlockpop{0%{transform:scale(.6);opacity:0}100%{transform:scale(1);opacity:1}}
+
 </style>
 </head>
 <body>
@@ -573,9 +610,10 @@ body.playing #introwrap{opacity:0}
 
       <div class="opt">
         <label>Module</label>
-        <div class="seg" data-opt="modules">
+        <div class="seg segwrap" data-opt="modules">
           <button data-val="1">Modul 1 (Treibstoff)</button>
           <button data-val="2" class="on">Modul 2 (+ Batterien)</button>
+          <button data-val="3">Modul 3 (+ Weltkräfte)</button>
         </div>
       </div>
 
@@ -895,6 +933,16 @@ const WORLD_COLORS = { KOSMOS:'#3b6fd6', BAU:'#e6a81f', TRUCKS:'#d33b34', TECHNI
 const TANK_MAX = 3;
 const BAT_MAX = 2;
 
+// Modul WELTKRAEFTE (Disruption). Jede Welt "bremst" den Gegner zu einem anderen Zeitpunkt.
+//   on: Ausloeser ("build" | "win" | "score" Durchbruch | "stand" Maschine steht am Rundenende)
+//   foeFuel/foeBat: Gegner verliert Kanister/Batterie.  (balanciert per Simulation, Spannweite 14, keine Stalls)
+const WORLD_POWERS = {
+  KOSMOS:  { on: "score", foeFuel: 1,           label: "Störfeld",      text: "Kommt deine Kosmos-Maschine durch, verliert der Gegner 1 Kanister." },
+  BAU:     { on: "build", foeFuel: 1,           label: "Erschütterung", text: "Baust du eine Bau-Maschine, verliert der Gegner 1 Kanister." },
+  TRUCKS:  { on: "stand", foeFuel: 1,           label: "Blockade",      text: "Solange dein Truck steht, verliert der Gegner jede Runde 1 Kanister." },
+  TECHNIK: { on: "win",   foeFuel: 2, foeBat: 1, label: "Entladung",    text: "Gewinnt deine Technik-Maschine, verliert der Gegner 2 Kanister und 1 Batterie." },
+};
+
 function cost(kraft) { return kraft <= 2 ? 1 : (kraft <= 4 ? 2 : 3); }
 
 function shuffle(a, rng = Math.random) {
@@ -909,10 +957,13 @@ let _uid = 1;
 function inst(def) { return { ...def, uid: _uid++ }; }
 
 // Baut eine Deckliste (Karten-Instanzen) nach Optionen.
-function buildDeck(opts) {
+// worlds: optionale Liste gewaehlter Welten (Modul Weltkraefte) -> nur diese Maschinen ins Deck.
+function buildDeck(opts, worlds) {
   const cards = [];
   const copies = opts.deckDoubled ? 2 : 1;
-  for (let c = 0; c < copies; c++) for (const m of MACHINES) cards.push(inst(m));
+  const useW = opts.worldPowers && Array.isArray(worlds) && worlds.length;
+  const pool = useW ? MACHINES.filter(m => worlds.includes(m.world)) : MACHINES;
+  for (let c = 0; c < copies; c++) for (const m of pool) cards.push(inst(m));
   if (opts.modules >= 2 || opts.boosters) {
     const bf = SPECIALS.find(s => s.id === "BOOSTER_FUEL");
     const bb = SPECIALS.find(s => s.id === "BOOSTER_BAT");
@@ -923,8 +974,8 @@ function buildDeck(opts) {
   return cards;
 }
 
-function newPlayer(idx, name, isAI, opts, rng) {
-  const deck = shuffle(buildDeck(opts), rng);
+function newPlayer(idx, name, isAI, opts, rng, worlds) {
+  const deck = shuffle(buildDeck(opts, worlds), rng);
   const hand = [];
   for (let i = 0; i < 3 && deck.length; i++) hand.push(deck.pop());
   return {
@@ -943,10 +994,13 @@ class Game {
       modules: 2, target: 5, deckDoubled: true, boosters: 4, tows: 2,
       names: ["Spieler", "Computer"], ai: [false, true], aiLevel: 0.85,
     }, opts);
+    // Weltkraefte: opts.powers ersetzt die Tabelle vollstaendig (fuer Simulation); sonst Standard.
+    this.powers = this.opts.powers || WORLD_POWERS;
     const rng = Math.random;
+    const W = this.opts.worlds || [];   // pro Spieler 2 gewaehlte Welten (Modul Weltkraefte)
     this.players = [
-      newPlayer(0, this.opts.names[0], this.opts.ai[0], this.opts, rng),
-      newPlayer(1, this.opts.names[1], this.opts.ai[1], this.opts, rng),
+      newPlayer(0, this.opts.names[0], this.opts.ai[0], this.opts, rng, W[0]),
+      newPlayer(1, this.opts.names[1], this.opts.ai[1], this.opts, rng, W[1]),
     ];
     this.round = 0;
     this.phase = "income";     // income | commit | resolve | gameover
@@ -1047,6 +1101,7 @@ class Game {
         p.slot = c; p.slotTurbo = false;
         if (a.turbo && p.bat > 0) { p.bat--; p.slotTurbo = true; }
         ev.push({ t: "build", i, card: c, turbo: p.slotTurbo });
+        if (this.opts.worldPowers) this._power(p, c.world, "build", ev);
       } else if (a.type === "booster") {
         const c = this.handCard(p, a.uid);
         p.hand = p.hand.filter(x => x.uid !== c.uid); p.garage.push(c);
@@ -1086,14 +1141,36 @@ class Game {
     const a = this.players[0], b = this.players[1];
     const ea = a.slot ? a.slot.kraft + (a.slotTurbo ? 2 : 0) : null;
     const eb = b.slot ? b.slot.kraft + (b.slotTurbo ? 2 : 0) : null;
+    const wp = this.opts.worldPowers;
     if (a.slot && b.slot) {
-      if (ea > eb) { b.garage.push(b.slot); b.slot = null; ev.push({ t: "clash", winner: 0, ea, eb }); }
-      else if (eb > ea) { a.garage.push(a.slot); a.slot = null; ev.push({ t: "clash", winner: 1, ea, eb }); }
-      else { a.garage.push(a.slot); b.garage.push(b.slot); a.slot = b.slot = null; ev.push({ t: "clash", winner: -1, ea, eb }); }
-    } else if (a.slot) { a.crystals++; ev.push({ t: "score", i: 0 }); }
-    else if (b.slot) { b.crystals++; ev.push({ t: "score", i: 1 }); }
+      if (ea > eb) {
+        this._onWin(a, ev);
+        if (wp && b.slot && this.powers[b.slot.world] && this.powers[b.slot.world].robust && (ea - eb) <= 1) ev.push({ t: "power", i: 1, world: b.slot.world });  // robust: knappe Niederlage ueberlebt
+        else if (b.slot) this._defeat(b, ev);
+        ev.push({ t: "clash", winner: 0, ea, eb });
+      } else if (eb > ea) {
+        this._onWin(b, ev);
+        if (wp && a.slot && this.powers[a.slot.world] && this.powers[a.slot.world].robust && (eb - ea) <= 1) ev.push({ t: "power", i: 0, world: a.slot.world });
+        else if (a.slot) this._defeat(a, ev);
+        ev.push({ t: "clash", winner: 1, ea, eb });
+      } else {
+        // Gleichstand. Weltkraft "Standhaft" (survive): Maschine bleibt stehen statt in die Garage.
+        const aB = wp && this.powers[a.slot.world] && this.powers[a.slot.world].survive;
+        const bB = wp && this.powers[b.slot.world] && this.powers[b.slot.world].survive;
+        let winner = -1;
+        if (aB && !bB) { this._defeat(b, ev); winner = 0; ev.push({ t: "power", i: 0, world: a.slot.world }); }
+        else if (bB && !aB) { this._defeat(a, ev); winner = 1; ev.push({ t: "power", i: 1, world: b.slot.world }); }
+        else if (aB && bB) { ev.push({ t: "power", i: 0, world: a.slot.world }); ev.push({ t: "power", i: 1, world: b.slot.world }); }  // beide bleiben stehen
+        else { this._defeat(a, ev); this._defeat(b, ev); }
+        ev.push({ t: "clash", winner, ea, eb });
+      }
+    } else if (a.slot) { a.crystals++; ev.push({ t: "score", i: 0 }); if (this.opts.worldPowers) this._power(a, a.slot.world, "score", ev); }
+    else if (b.slot) { b.crystals++; ev.push({ t: "score", i: 1 }); if (this.opts.worldPowers) this._power(b, b.slot.world, "score", ev); }
     else { ev.push({ t: "nothing" }); }
     a.slotTurbo = false; b.slotTurbo = false;   // Turbo-Batterie ist nach dem Kampf verbraucht
+
+    // Weltkraft-Ausloeser "stand": Maschine steht am Rundenende.
+    if (this.opts.worldPowers) for (const p of this.players) if (p.slot) this._power(p, p.slot.world, "stand", ev);
 
     // 4) Nachziehen
     for (const p of this.players) this.drawUp(p);
@@ -1111,6 +1188,32 @@ class Game {
   gain(p, kind) {
     if (kind === "bat") { if (p.bat < BAT_MAX) p.bat++; else if (p.fuel < TANK_MAX) p.fuel++; }
     else { if (p.fuel < TANK_MAX) p.fuel++; else if (p.bat < BAT_MAX) p.bat++; }
+  }
+
+  // Weltkraft ausloesen, wenn Welt w den Ausloeser trigger nutzt.
+  _power(pl, w, trigger, ev) {
+    const pw = this.powers[w];
+    if (!pw || pw.on !== trigger) return;
+    let acted = false;
+    if (pw.gain) { for (let k = 0; k < (pw.amt || 1); k++) this.gain(pl, pw.gain); acted = true; }
+    if (pw.foeFuel) { const o = this.opp(pl.idx); o.fuel = Math.max(0, o.fuel - pw.foeFuel); acted = true; }   // Gegner bremsen (Kanister)
+    if (pw.foeBat) { const o = this.opp(pl.idx); o.bat = Math.max(0, o.bat - pw.foeBat); acted = true; }        // Gegner bremsen (Batterie)
+    if (pw.clearFoe) { const o = this.opp(pl.idx); if (o.slot) { o.garage.push(o.slot); o.slot = null; o.slotTurbo = false; acted = true; } }  // Spur leeren
+    if (acted) ev && ev.push({ t: "power", i: pl.idx, world: w });
+  }
+
+  // Maschine verliert einen Kampf (Ausloeser "lose"). toHand: kommt auf die Hand statt in die Garage.
+  _defeat(pl, ev) {
+    const card = pl.slot;
+    pl.slot = null; pl.slotTurbo = false;
+    const pw = this.opts.worldPowers && card ? this.powers[card.world] : null;
+    if (pw && pw.toHand) pl.hand.push(card); else pl.garage.push(card);
+    if (this.opts.worldPowers && card) this._power(pl, card.world, "lose", ev);
+  }
+
+  // Maschine gewinnt einen Kampf (Ausloeser "win").
+  _onWin(pl, ev) {
+    if (this.opts.worldPowers && pl.slot) this._power(pl, pl.slot.world, "win", ev);
   }
 
   drawUp(p) {
@@ -1423,14 +1526,56 @@ function worldFx(card, p, strong = false) {
   }
 }
 
-const cfg = { mode: "ai", modules: 2, target: 5, ai: 0.85 };
+const cfg = { mode: "ai", modules: 1, target: 5, ai: 0.85 };
 let game = null;
 let persp = 0;          // aus wessen Sicht der Tisch gerade gezeigt wird
+
+// ---------- Freischaltung (im Geraet gespeichert) ----------
+// Modul 2 nach 3 Siegen in Modul 1, Modul 3 nach 5 Siegen in Modul 2 (nur Siege gegen den Computer zaehlen).
+const Prog = (() => {
+  const KEY = m => "kb_wins_m" + m;
+  const TH = { 2: 3, 3: 5 };
+  const get = m => { try { return Math.max(0, +(localStorage.getItem(KEY(m)) || 0) || 0); } catch (e) { return 0; } };
+  const set = (m, v) => { try { localStorage.setItem(KEY(m), v); } catch (e) {} };
+  return {
+    wins: get,
+    unlocked: m => m <= 1 ? true : get(m - 1) >= TH[m],
+    need: m => TH[m] || 0,
+    have: m => get(m - 1),
+    addWin(m) {                       // gibt neu freigeschaltetes Modul zurueck (oder 0)
+      if (m !== 1 && m !== 2) return 0;
+      const b2 = this.unlocked(2), b3 = this.unlocked(3);
+      set(m, get(m) + 1);
+      if (!b2 && this.unlocked(2)) return 2;
+      if (!b3 && this.unlocked(3)) return 3;
+      return 0;
+    },
+  };
+})();
+const MOD_LABEL = { 1: "Modul 1 (Treibstoff)", 2: "Modul 2 (+ Batterien)", 3: "Modul 3 (+ Weltkräfte)" };
+function applyProgression() {
+  const seg = document.querySelector('[data-opt="modules"]');
+  if (!seg || !seg.querySelectorAll) return;
+  let top = 1;
+  seg.querySelectorAll("button").forEach(b => {
+    const m = +b.dataset.val, ok = Prog.unlocked(m);
+    if (b.classList) b.classList.toggle("locked", !ok);
+    b.innerHTML = ok ? MOD_LABEL[m] : `🔒 Modul ${m} <small>${Prog.have(m)}/${Prog.need(m)} Siege</small>`;
+    if (ok) top = Math.max(top, m);
+  });
+  const cur = seg.querySelector("button.on");
+  const keep = cur && cur.classList && !cur.classList.contains("locked") ? +cur.dataset.val : top;
+  seg.querySelectorAll("button").forEach(x => x.classList && x.classList.toggle("on", +x.dataset.val === keep));
+  cfg.modules = keep;   // Auswahl und cfg immer synchron halten
+}
 
 // ---------- Menue ----------
 $$("#menu .seg").forEach(seg => {
   seg.addEventListener("click", e => {
     const b = e.target.closest("button"); if (!b) return;
+    if (b.classList.contains("locked")) {   // gesperrtes Modul: nicht waehlbar, kurz wackeln
+      Snd.click(); b.classList.remove("lockshake"); void b.offsetWidth; b.classList.add("lockshake"); return;
+    }
     seg.querySelectorAll("button").forEach(x => x.classList.remove("on"));
     b.classList.add("on");
     const opt = seg.dataset.opt, val = b.dataset.val;
@@ -1439,6 +1584,7 @@ $$("#menu .seg").forEach(seg => {
     Snd.click();
   });
 });
+applyProgression();   // beim Start: Schloesser + Fortschritt anzeigen, Auswahl auf hoechstes freies Modul
 $("#startBtn").addEventListener("click", () => { Snd.resume(); Snd.click(); startGame(); });
 
 // Stummschalter (dynamisch, unten rechts)
@@ -1539,20 +1685,36 @@ function playIntro() { if (!introVid || !introVid.play) return; const p = introV
 function backToMenu() {
   $("#table").classList.add("hidden"); $("#menu").classList.remove("hidden");
   if (document.body && document.body.classList) document.body.classList.remove("playing");
+  applyProgression();   // Freischaltungen im Menue aktualisieren
   playIntro();
 }
 $("#menuBtn").addEventListener("click", () => { backToMenu(); hideOverlay(); });
 
+// Repraesentative Maschine + Anzeigename je Welt (fuer die Welten-Wahl).
+const WORLD_META = {
+  KOSMOS:  { name: "Kosmos",  img: "cards/KOS-6_Galaxie-Riese.png" },
+  BAU:     { name: "Bau",     img: "cards/BAU-6_Riesen-Kran.png" },
+  TECHNIK: { name: "Technik", img: "cards/TEC-6_Boss-Roboter.png" },
+  TRUCKS:  { name: "Trucks",  img: "cards/TRK-6_Riesen-Sattelschlepper.png" },
+};
+const WORLD_ORDER = ["BAU", "KOSMOS", "TECHNIK", "TRUCKS"];
+
 function startGame() {
   const hot = cfg.mode === "hot";
+  if (cfg.modules === 3) { pickWorlds(hot); return; }   // Modul 3: erst 2 Welten waehlen
+  launchGame(hot, cfg.modules, false, null);
+}
+
+function launchGame(hot, modules, worldPowers, worlds) {
   game = new Game({
-    modules: cfg.modules, target: cfg.target,
-    deckDoubled: true, boosters: cfg.modules >= 2 ? 4 : 2, tows: 2,
+    modules, target: cfg.target,
+    deckDoubled: true, boosters: modules >= 2 ? 4 : 2, tows: 2,
+    worldPowers, worlds,
     names: hot ? ["Spieler 1", "Spieler 2"] : ["Du", "Computer"],
     ai: hot ? [false, false] : [false, true],
     aiLevel: cfg.ai,
   });
-  $("#menu").classList.add("hidden");
+  $("#menu").classList.add("hidden"); hideOverlay();
   $("#table").classList.remove("hidden");
   if (document.body && document.body.classList) document.body.classList.add("playing");
   if (introVid && introVid.pause) introVid.pause();     // im Spiel kein bewegter Hintergrund
@@ -1560,6 +1722,42 @@ function startGame() {
   ["oppDeck", "meDeck"].forEach(id => { if (!$("#" + id)) { const d = document.createElement("div"); d.id = id; d.className = "deckpile"; $("#battle").appendChild(d); } });
   persp = 0;
   advance();
+}
+
+const randomTwoWorlds = () => { const a = WORLD_ORDER.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a.slice(0, 2); };
+
+// Modul 3: Welten-Wahl (2 von 4) als grosser Bild-Screen. Hotseat: beide waehlen; gegen Computer waehlt dieser zufaellig.
+function pickWorlds(hot) {
+  const pickFor = (who, cb) => {
+    const chosen = [];
+    const render = () => {
+      const cards = WORLD_ORDER.map(w => {
+        const m = WORLD_META[w], on = chosen.includes(w), pw = WORLD_POWERS[w];
+        return `<button class="worldpick${on ? " on" : ""}" data-w="${w}" style="--wc:${WORLD_COLORS[w]}">
+          <span class="wimg" style="background-image:url('${m.img}')"></span>
+          <b class="wname">${m.name}</b>
+          <span class="wpow"><i>${pw.label}</i>${pw.text}</span>
+        </button>`;
+      }).join("");
+      showOverlay(`<div class="worldpicker">
+        <h2>${who}: Wähle 2 Welten</h2>
+        <div class="worldgrid">${cards}</div>
+        <button id="wpGo" class="big"${chosen.length === 2 ? "" : " disabled"}>Weiter</button>
+        <p class="hint">Jede Welt bremst den Gegner auf ihre Art. Such dir deine zwei Lieblingswelten aus.</p>
+      </div>`);
+      ovi.querySelectorAll(".worldpick").forEach(b => b.addEventListener("click", () => {
+        const w = b.dataset.w, i = chosen.indexOf(w);
+        if (i >= 0) chosen.splice(i, 1); else if (chosen.length < 2) chosen.push(w);
+        Snd.click(); render();
+      }));
+      const go = $("#wpGo"); if (go && !go.disabled) go.addEventListener("click", () => { Snd.click(); cb(chosen.slice()); });
+    };
+    render();
+  };
+  pickFor(hot ? "Spieler 1" : "Du", w0 => {
+    if (hot) pickFor("Spieler 2", w1 => launchGame(hot, 2, true, [w0, w1]));
+    else launchGame(hot, 2, true, [w0, randomTwoWorlds()]);
+  });
 }
 
 function deckStack(n) {
@@ -1576,11 +1774,7 @@ function cardEl(card, { back = false, small = false } = {}) {
   const d = document.createElement("div");
   d.className = "card" + (back ? " back" : "");
   d.style.backgroundImage = `url("${back ? CARD_BACK : card.img}")`;
-  if (!back && card && card.kraft) {
-    const c = document.createElement("div"); c.className = "cost";
-    for (let i = 0; i < card.cost; i++) c.appendChild(document.createElement("i"));
-    d.appendChild(c);
-  }
+  // Kosten-Quadrate entfernt: das Karten-Artwork zeigt die Kanister-Kosten bereits.
   return d;
 }
 
@@ -1588,15 +1782,47 @@ function cardEl(card, { back = false, small = false } = {}) {
 // bezahlter Treibstoff/Batterie verschwindet sofort aus dem Zaehler, die gespielte Karte
 // verlaesst die Hand. Nur fuer die eigene Seite — beim Gegner wuerde das die Wahl verraten.
 function pendPlayUid(p) { const t = p.pending && p.pending.type; return (t === "build" || t === "booster" || t === "tow") ? p.pending.uid : null; }
+// Kleine Welt-Punkte neben dem Namen (nur Modul 3): zeigt, welche 2 Weltkraefte dieser Spieler hat.
+function worldBadges(p) {
+  if (!game.opts.worldPowers) return "";
+  const ws = (game.opts.worlds || [])[p.idx] || [];
+  return ' ' + ws.map(w => `<i class="wdot" title="${(WORLD_POWERS[w] || {}).label || w}" style="background:${WORLD_COLORS[w] || "#888"}"></i>`).join("");
+}
 function dispFuel(p) { if (p.pending && p.pending.type === "build") { const c = game.handCard(p, p.pending.uid); if (c) return Math.max(0, p.fuel - c.cost); } return p.fuel; }
 function dispBat(p) { return (p.pending && p.pending.type === "build" && p.pending.turbo && p.bat > 0) ? Math.max(0, p.bat - 1) : p.bat; }
+
+// Modul 3: "power"-Events -> Gegner-Zaehler rot aufblitzen + Minus-Zahl schweben lassen.
+function drainFx(ev) {
+  if (!game || !game.opts.worldPowers) return;
+  const powers = (ev || []).filter(e => e.t === "power");
+  if (!powers.length) return;
+  const sum = {};   // Opfer-Index -> {fuel, bat}
+  for (const e of powers) {
+    const pw = WORLD_POWERS[e.world] || {}, v = 1 - e.i;
+    const s = sum[v] || (sum[v] = { fuel: 0, bat: 0 });
+    s.fuel += pw.foeFuel || 0; s.bat += pw.foeBat || 0;
+  }
+  let any = false;
+  for (const v in sum) {
+    const s = sum[v], side = (+v === persp) ? "#meArea" : "#oppArea";
+    const hit = (selc, amt) => {
+      const el = $(side + " " + selc); if (!el || !amt) return;
+      el.classList.add("drainhit"); setTimeout(() => { if (el.classList) el.classList.remove("drainhit"); }, 720);
+      const r = el.getBoundingClientRect && el.getBoundingClientRect();
+      if (r && typeof floatText === "function") floatText(r.left + r.width / 2, r.top + 4, "−" + amt, "#ff7a7a", true);
+      any = true;
+    };
+    hit(".tank", s.fuel); hit(".batt", s.bat);
+  }
+  if (any && Snd.tick) Snd.tick();
+}
 
 function renderBoard() {
   const me = game.players[persp], op = game.players[1 - persp];
   // Info
   const meA = $("#meArea"), opA = $("#oppArea");
-  meA.querySelector(".pname").textContent = me.name;
-  opA.querySelector(".pname").textContent = op.name;
+  meA.querySelector(".pname").innerHTML = me.name + worldBadges(me);
+  opA.querySelector(".pname").innerHTML = op.name + worldBadges(op);
   for (const [area, p, isMe] of [[meA, me, true], [opA, op, false]]) {
     const f = isMe ? dispFuel(p) : p.fuel, b = isMe ? dispBat(p) : p.bat;
     area.querySelector(".tank").innerHTML = gauge("assets/kanister.png", f, TANK_MAX);
@@ -1610,8 +1836,8 @@ function renderBoard() {
   for (let i = 0; i < op.hand.length; i++) oh.appendChild(cardEl(null, { back: true }));
 
   // Slots (stehende Maschinen)
-  slotRenderPre($("#oppSlot"), op);
-  slotRenderPre($("#meSlot"), me);
+  slotRenderPre($("#oppSlot"), op, true);   // Gegnerwahl verdeckt halten (kein Leak vor dem Aufdecken)
+  slotRenderPre($("#meSlot"), me, false);
   if ($("#meDeck")) $("#meDeck").innerHTML = deckStack(me.deck.length);
   if ($("#oppDeck")) $("#oppDeck").innerHTML = deckStack(op.deck.length);
 
@@ -1635,9 +1861,17 @@ function pips(box, val, max, cls) {
 }
 
 // Vor dem Aufdecken: stehende Maschine offen, neu gespielte Karte verdeckt (Rueckseite).
-function slotRenderPre(el, p) {
+// hideChoice=true (Gegnerseite): JEDE getroffene Wahl sieht gleich aus (verdeckte Karte) — auch "sparen".
+// Sonst wuerde man vor dem eigenen Zug sehen, ob der Gegner baut oder spart (Info-Leak).
+function slotRenderPre(el, p, hideChoice) {
+  // Stehende Maschine, die weiterkaempft: immer offen sichtbar (oeffentlicher Spielstand).
   if (p.slot && (!p.pending || p.pending.type === "none")) { slotShow(el, p.slot, p.slotTurbo); return; }
   const t = p.pending && p.pending.type;
+  if (hideChoice) {
+    // Gegner hat (verdeckt) gewaehlt: bauen ODER sparen -> identische Rueckseite, kein Leak.
+    if (p.pending) { el.innerHTML = ""; el.classList.remove("empty"); const c = cardEl(null, { back: true }); c.classList.add("pending"); el.appendChild(c); return; }
+    slotShow(el, p.slot, p.slotTurbo); return;   // noch nicht gewaehlt (z. B. Hotseat)
+  }
   if (t === "build" || t === "booster" || t === "tow") {
     el.innerHTML = ""; el.classList.remove("empty");
     const c = cardEl(null, { back: true }); c.classList.add("pending");
@@ -2027,6 +2261,7 @@ async function revealAndResolve() {
   } else if (!towed) {
     flash("Nichts passiert");
   }
+  drainFx(ev);   // Modul 3: Brems-Effekte sichtbar machen (Gegner verliert Kanister/Batterie)
   const win = ev.find(e => e.t === "win");
   await sleep(win ? 1900 : 2600);   // Zahlen/Kristall stehen ~2,2 s -> Ergebnis nicht vorher wegnehmen
   advance();
@@ -2084,12 +2319,17 @@ function playFullscreenVideo(src, onDone) {
 function winScreen() {
   const w = game.players[game.winner];
   const humanWon = !w.isAI;
+  // Nur Siege gegen den Computer zaehlen fuer die Freischaltung.
+  const unlocked = (humanWon && cfg.mode === "ai") ? Prog.addWin(cfg.modules) : 0;
+  if (humanWon && cfg.mode === "ai") applyProgression();
   const show = () => {
     FX.rain(); FX.burst(innerWidth / 2, innerHeight / 2, "255,207,63", 60, { spread: 14, g: 0.12 }); shake(1.4);
     humanWon ? Snd.win() : Snd.lose();
+    const unlockMsg = unlocked ? `<div class="unlockbanner">🎉 ${MOD_LABEL[unlocked]} freigeschaltet!</div>` : "";
     showOverlay(`<div class="winbanner">🏆 ${w.name} ${w.name === "Du" ? "gewinnst" : "gewinnt"}!</div>
       <div class="wingems">${"◆".repeat(w.crystals)}</div>
       <p>${w.crystals} Kristalle gesammelt in ${game.round} Runden.</p>
+      ${unlockMsg}
       <div class="incpick" style="margin-top:16px">
         <button class="pbtn pagain pbig-btn" id="againBtn" title="Nochmal spielen" aria-label="Nochmal spielen"><span class="picon">${ICON.again}</span></button>
         <button class="pbtn phome pghost pbig-btn" id="menu2" title="Zurück zum Menü" aria-label="Zurück zum Menü"><span class="picon">${ICON.home}</span></button>

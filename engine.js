@@ -5,6 +5,16 @@ import { MACHINES, SPECIALS } from "./cards.js";
 export const TANK_MAX = 3;
 export const BAT_MAX = 2;
 
+// Modul WELTKRAEFTE (Disruption). Jede Welt "bremst" den Gegner zu einem anderen Zeitpunkt.
+//   on: Ausloeser ("build" | "win" | "score" Durchbruch | "stand" Maschine steht am Rundenende)
+//   foeFuel/foeBat: Gegner verliert Kanister/Batterie.  (balanciert per Simulation, Spannweite 14, keine Stalls)
+export const WORLD_POWERS = {
+  KOSMOS:  { on: "score", foeFuel: 1,           label: "Störfeld",      text: "Kommt deine Kosmos-Maschine durch, verliert der Gegner 1 Kanister." },
+  BAU:     { on: "build", foeFuel: 1,           label: "Erschütterung", text: "Baust du eine Bau-Maschine, verliert der Gegner 1 Kanister." },
+  TRUCKS:  { on: "stand", foeFuel: 1,           label: "Blockade",      text: "Solange dein Truck steht, verliert der Gegner jede Runde 1 Kanister." },
+  TECHNIK: { on: "win",   foeFuel: 2, foeBat: 1, label: "Entladung",    text: "Gewinnt deine Technik-Maschine, verliert der Gegner 2 Kanister und 1 Batterie." },
+};
+
 export function cost(kraft) { return kraft <= 2 ? 1 : (kraft <= 4 ? 2 : 3); }
 
 function shuffle(a, rng = Math.random) {
@@ -19,10 +29,13 @@ let _uid = 1;
 function inst(def) { return { ...def, uid: _uid++ }; }
 
 // Baut eine Deckliste (Karten-Instanzen) nach Optionen.
-function buildDeck(opts) {
+// worlds: optionale Liste gewaehlter Welten (Modul Weltkraefte) -> nur diese Maschinen ins Deck.
+function buildDeck(opts, worlds) {
   const cards = [];
   const copies = opts.deckDoubled ? 2 : 1;
-  for (let c = 0; c < copies; c++) for (const m of MACHINES) cards.push(inst(m));
+  const useW = opts.worldPowers && Array.isArray(worlds) && worlds.length;
+  const pool = useW ? MACHINES.filter(m => worlds.includes(m.world)) : MACHINES;
+  for (let c = 0; c < copies; c++) for (const m of pool) cards.push(inst(m));
   if (opts.modules >= 2 || opts.boosters) {
     const bf = SPECIALS.find(s => s.id === "BOOSTER_FUEL");
     const bb = SPECIALS.find(s => s.id === "BOOSTER_BAT");
@@ -33,8 +46,8 @@ function buildDeck(opts) {
   return cards;
 }
 
-function newPlayer(idx, name, isAI, opts, rng) {
-  const deck = shuffle(buildDeck(opts), rng);
+function newPlayer(idx, name, isAI, opts, rng, worlds) {
+  const deck = shuffle(buildDeck(opts, worlds), rng);
   const hand = [];
   for (let i = 0; i < 3 && deck.length; i++) hand.push(deck.pop());
   return {
@@ -53,10 +66,13 @@ export class Game {
       modules: 2, target: 5, deckDoubled: true, boosters: 4, tows: 2,
       names: ["Spieler", "Computer"], ai: [false, true], aiLevel: 0.85,
     }, opts);
+    // Weltkraefte: opts.powers ersetzt die Tabelle vollstaendig (fuer Simulation); sonst Standard.
+    this.powers = this.opts.powers || WORLD_POWERS;
     const rng = Math.random;
+    const W = this.opts.worlds || [];   // pro Spieler 2 gewaehlte Welten (Modul Weltkraefte)
     this.players = [
-      newPlayer(0, this.opts.names[0], this.opts.ai[0], this.opts, rng),
-      newPlayer(1, this.opts.names[1], this.opts.ai[1], this.opts, rng),
+      newPlayer(0, this.opts.names[0], this.opts.ai[0], this.opts, rng, W[0]),
+      newPlayer(1, this.opts.names[1], this.opts.ai[1], this.opts, rng, W[1]),
     ];
     this.round = 0;
     this.phase = "income";     // income | commit | resolve | gameover
@@ -157,6 +173,7 @@ export class Game {
         p.slot = c; p.slotTurbo = false;
         if (a.turbo && p.bat > 0) { p.bat--; p.slotTurbo = true; }
         ev.push({ t: "build", i, card: c, turbo: p.slotTurbo });
+        if (this.opts.worldPowers) this._power(p, c.world, "build", ev);
       } else if (a.type === "booster") {
         const c = this.handCard(p, a.uid);
         p.hand = p.hand.filter(x => x.uid !== c.uid); p.garage.push(c);
@@ -196,14 +213,36 @@ export class Game {
     const a = this.players[0], b = this.players[1];
     const ea = a.slot ? a.slot.kraft + (a.slotTurbo ? 2 : 0) : null;
     const eb = b.slot ? b.slot.kraft + (b.slotTurbo ? 2 : 0) : null;
+    const wp = this.opts.worldPowers;
     if (a.slot && b.slot) {
-      if (ea > eb) { b.garage.push(b.slot); b.slot = null; ev.push({ t: "clash", winner: 0, ea, eb }); }
-      else if (eb > ea) { a.garage.push(a.slot); a.slot = null; ev.push({ t: "clash", winner: 1, ea, eb }); }
-      else { a.garage.push(a.slot); b.garage.push(b.slot); a.slot = b.slot = null; ev.push({ t: "clash", winner: -1, ea, eb }); }
-    } else if (a.slot) { a.crystals++; ev.push({ t: "score", i: 0 }); }
-    else if (b.slot) { b.crystals++; ev.push({ t: "score", i: 1 }); }
+      if (ea > eb) {
+        this._onWin(a, ev);
+        if (wp && b.slot && this.powers[b.slot.world] && this.powers[b.slot.world].robust && (ea - eb) <= 1) ev.push({ t: "power", i: 1, world: b.slot.world });  // robust: knappe Niederlage ueberlebt
+        else if (b.slot) this._defeat(b, ev);
+        ev.push({ t: "clash", winner: 0, ea, eb });
+      } else if (eb > ea) {
+        this._onWin(b, ev);
+        if (wp && a.slot && this.powers[a.slot.world] && this.powers[a.slot.world].robust && (eb - ea) <= 1) ev.push({ t: "power", i: 0, world: a.slot.world });
+        else if (a.slot) this._defeat(a, ev);
+        ev.push({ t: "clash", winner: 1, ea, eb });
+      } else {
+        // Gleichstand. Weltkraft "Standhaft" (survive): Maschine bleibt stehen statt in die Garage.
+        const aB = wp && this.powers[a.slot.world] && this.powers[a.slot.world].survive;
+        const bB = wp && this.powers[b.slot.world] && this.powers[b.slot.world].survive;
+        let winner = -1;
+        if (aB && !bB) { this._defeat(b, ev); winner = 0; ev.push({ t: "power", i: 0, world: a.slot.world }); }
+        else if (bB && !aB) { this._defeat(a, ev); winner = 1; ev.push({ t: "power", i: 1, world: b.slot.world }); }
+        else if (aB && bB) { ev.push({ t: "power", i: 0, world: a.slot.world }); ev.push({ t: "power", i: 1, world: b.slot.world }); }  // beide bleiben stehen
+        else { this._defeat(a, ev); this._defeat(b, ev); }
+        ev.push({ t: "clash", winner, ea, eb });
+      }
+    } else if (a.slot) { a.crystals++; ev.push({ t: "score", i: 0 }); if (this.opts.worldPowers) this._power(a, a.slot.world, "score", ev); }
+    else if (b.slot) { b.crystals++; ev.push({ t: "score", i: 1 }); if (this.opts.worldPowers) this._power(b, b.slot.world, "score", ev); }
     else { ev.push({ t: "nothing" }); }
     a.slotTurbo = false; b.slotTurbo = false;   // Turbo-Batterie ist nach dem Kampf verbraucht
+
+    // Weltkraft-Ausloeser "stand": Maschine steht am Rundenende.
+    if (this.opts.worldPowers) for (const p of this.players) if (p.slot) this._power(p, p.slot.world, "stand", ev);
 
     // 4) Nachziehen
     for (const p of this.players) this.drawUp(p);
@@ -221,6 +260,32 @@ export class Game {
   gain(p, kind) {
     if (kind === "bat") { if (p.bat < BAT_MAX) p.bat++; else if (p.fuel < TANK_MAX) p.fuel++; }
     else { if (p.fuel < TANK_MAX) p.fuel++; else if (p.bat < BAT_MAX) p.bat++; }
+  }
+
+  // Weltkraft ausloesen, wenn Welt w den Ausloeser trigger nutzt.
+  _power(pl, w, trigger, ev) {
+    const pw = this.powers[w];
+    if (!pw || pw.on !== trigger) return;
+    let acted = false;
+    if (pw.gain) { for (let k = 0; k < (pw.amt || 1); k++) this.gain(pl, pw.gain); acted = true; }
+    if (pw.foeFuel) { const o = this.opp(pl.idx); o.fuel = Math.max(0, o.fuel - pw.foeFuel); acted = true; }   // Gegner bremsen (Kanister)
+    if (pw.foeBat) { const o = this.opp(pl.idx); o.bat = Math.max(0, o.bat - pw.foeBat); acted = true; }        // Gegner bremsen (Batterie)
+    if (pw.clearFoe) { const o = this.opp(pl.idx); if (o.slot) { o.garage.push(o.slot); o.slot = null; o.slotTurbo = false; acted = true; } }  // Spur leeren
+    if (acted) ev && ev.push({ t: "power", i: pl.idx, world: w });
+  }
+
+  // Maschine verliert einen Kampf (Ausloeser "lose"). toHand: kommt auf die Hand statt in die Garage.
+  _defeat(pl, ev) {
+    const card = pl.slot;
+    pl.slot = null; pl.slotTurbo = false;
+    const pw = this.opts.worldPowers && card ? this.powers[card.world] : null;
+    if (pw && pw.toHand) pl.hand.push(card); else pl.garage.push(card);
+    if (this.opts.worldPowers && card) this._power(pl, card.world, "lose", ev);
+  }
+
+  // Maschine gewinnt einen Kampf (Ausloeser "win").
+  _onWin(pl, ev) {
+    if (this.opts.worldPowers && pl.slot) this._power(pl, pl.slot.world, "win", ev);
   }
 
   drawUp(p) {

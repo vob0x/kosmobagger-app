@@ -1,4 +1,4 @@
-import { Game, TANK_MAX, BAT_MAX } from "./engine.js";
+import { Game, TANK_MAX, BAT_MAX, WORLD_POWERS } from "./engine.js";
 import { CARD_BACK, WORLD_COLORS } from "./cards.js";
 
 const $ = s => document.querySelector(s);
@@ -251,14 +251,56 @@ function worldFx(card, p, strong = false) {
   }
 }
 
-const cfg = { mode: "ai", modules: 2, target: 5, ai: 0.85 };
+const cfg = { mode: "ai", modules: 1, target: 5, ai: 0.85 };
 let game = null;
 let persp = 0;          // aus wessen Sicht der Tisch gerade gezeigt wird
+
+// ---------- Freischaltung (im Geraet gespeichert) ----------
+// Modul 2 nach 3 Siegen in Modul 1, Modul 3 nach 5 Siegen in Modul 2 (nur Siege gegen den Computer zaehlen).
+const Prog = (() => {
+  const KEY = m => "kb_wins_m" + m;
+  const TH = { 2: 3, 3: 5 };
+  const get = m => { try { return Math.max(0, +(localStorage.getItem(KEY(m)) || 0) || 0); } catch (e) { return 0; } };
+  const set = (m, v) => { try { localStorage.setItem(KEY(m), v); } catch (e) {} };
+  return {
+    wins: get,
+    unlocked: m => m <= 1 ? true : get(m - 1) >= TH[m],
+    need: m => TH[m] || 0,
+    have: m => get(m - 1),
+    addWin(m) {                       // gibt neu freigeschaltetes Modul zurueck (oder 0)
+      if (m !== 1 && m !== 2) return 0;
+      const b2 = this.unlocked(2), b3 = this.unlocked(3);
+      set(m, get(m) + 1);
+      if (!b2 && this.unlocked(2)) return 2;
+      if (!b3 && this.unlocked(3)) return 3;
+      return 0;
+    },
+  };
+})();
+const MOD_LABEL = { 1: "Modul 1 (Treibstoff)", 2: "Modul 2 (+ Batterien)", 3: "Modul 3 (+ Weltkräfte)" };
+function applyProgression() {
+  const seg = document.querySelector('[data-opt="modules"]');
+  if (!seg || !seg.querySelectorAll) return;
+  let top = 1;
+  seg.querySelectorAll("button").forEach(b => {
+    const m = +b.dataset.val, ok = Prog.unlocked(m);
+    if (b.classList) b.classList.toggle("locked", !ok);
+    b.innerHTML = ok ? MOD_LABEL[m] : `🔒 Modul ${m} <small>${Prog.have(m)}/${Prog.need(m)} Siege</small>`;
+    if (ok) top = Math.max(top, m);
+  });
+  const cur = seg.querySelector("button.on");
+  const keep = cur && cur.classList && !cur.classList.contains("locked") ? +cur.dataset.val : top;
+  seg.querySelectorAll("button").forEach(x => x.classList && x.classList.toggle("on", +x.dataset.val === keep));
+  cfg.modules = keep;   // Auswahl und cfg immer synchron halten
+}
 
 // ---------- Menue ----------
 $$("#menu .seg").forEach(seg => {
   seg.addEventListener("click", e => {
     const b = e.target.closest("button"); if (!b) return;
+    if (b.classList.contains("locked")) {   // gesperrtes Modul: nicht waehlbar, kurz wackeln
+      Snd.click(); b.classList.remove("lockshake"); void b.offsetWidth; b.classList.add("lockshake"); return;
+    }
     seg.querySelectorAll("button").forEach(x => x.classList.remove("on"));
     b.classList.add("on");
     const opt = seg.dataset.opt, val = b.dataset.val;
@@ -267,6 +309,7 @@ $$("#menu .seg").forEach(seg => {
     Snd.click();
   });
 });
+applyProgression();   // beim Start: Schloesser + Fortschritt anzeigen, Auswahl auf hoechstes freies Modul
 $("#startBtn").addEventListener("click", () => { Snd.resume(); Snd.click(); startGame(); });
 
 // Stummschalter (dynamisch, unten rechts)
@@ -367,20 +410,36 @@ function playIntro() { if (!introVid || !introVid.play) return; const p = introV
 function backToMenu() {
   $("#table").classList.add("hidden"); $("#menu").classList.remove("hidden");
   if (document.body && document.body.classList) document.body.classList.remove("playing");
+  applyProgression();   // Freischaltungen im Menue aktualisieren
   playIntro();
 }
 $("#menuBtn").addEventListener("click", () => { backToMenu(); hideOverlay(); });
 
+// Repraesentative Maschine + Anzeigename je Welt (fuer die Welten-Wahl).
+const WORLD_META = {
+  KOSMOS:  { name: "Kosmos",  img: "cards/KOS-6_Galaxie-Riese.png" },
+  BAU:     { name: "Bau",     img: "cards/BAU-6_Riesen-Kran.png" },
+  TECHNIK: { name: "Technik", img: "cards/TEC-6_Boss-Roboter.png" },
+  TRUCKS:  { name: "Trucks",  img: "cards/TRK-6_Riesen-Sattelschlepper.png" },
+};
+const WORLD_ORDER = ["BAU", "KOSMOS", "TECHNIK", "TRUCKS"];
+
 function startGame() {
   const hot = cfg.mode === "hot";
+  if (cfg.modules === 3) { pickWorlds(hot); return; }   // Modul 3: erst 2 Welten waehlen
+  launchGame(hot, cfg.modules, false, null);
+}
+
+function launchGame(hot, modules, worldPowers, worlds) {
   game = new Game({
-    modules: cfg.modules, target: cfg.target,
-    deckDoubled: true, boosters: cfg.modules >= 2 ? 4 : 2, tows: 2,
+    modules, target: cfg.target,
+    deckDoubled: true, boosters: modules >= 2 ? 4 : 2, tows: 2,
+    worldPowers, worlds,
     names: hot ? ["Spieler 1", "Spieler 2"] : ["Du", "Computer"],
     ai: hot ? [false, false] : [false, true],
     aiLevel: cfg.ai,
   });
-  $("#menu").classList.add("hidden");
+  $("#menu").classList.add("hidden"); hideOverlay();
   $("#table").classList.remove("hidden");
   if (document.body && document.body.classList) document.body.classList.add("playing");
   if (introVid && introVid.pause) introVid.pause();     // im Spiel kein bewegter Hintergrund
@@ -388,6 +447,42 @@ function startGame() {
   ["oppDeck", "meDeck"].forEach(id => { if (!$("#" + id)) { const d = document.createElement("div"); d.id = id; d.className = "deckpile"; $("#battle").appendChild(d); } });
   persp = 0;
   advance();
+}
+
+const randomTwoWorlds = () => { const a = WORLD_ORDER.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a.slice(0, 2); };
+
+// Modul 3: Welten-Wahl (2 von 4) als grosser Bild-Screen. Hotseat: beide waehlen; gegen Computer waehlt dieser zufaellig.
+function pickWorlds(hot) {
+  const pickFor = (who, cb) => {
+    const chosen = [];
+    const render = () => {
+      const cards = WORLD_ORDER.map(w => {
+        const m = WORLD_META[w], on = chosen.includes(w), pw = WORLD_POWERS[w];
+        return `<button class="worldpick${on ? " on" : ""}" data-w="${w}" style="--wc:${WORLD_COLORS[w]}">
+          <span class="wimg" style="background-image:url('${m.img}')"></span>
+          <b class="wname">${m.name}</b>
+          <span class="wpow"><i>${pw.label}</i>${pw.text}</span>
+        </button>`;
+      }).join("");
+      showOverlay(`<div class="worldpicker">
+        <h2>${who}: Wähle 2 Welten</h2>
+        <div class="worldgrid">${cards}</div>
+        <button id="wpGo" class="big"${chosen.length === 2 ? "" : " disabled"}>Weiter</button>
+        <p class="hint">Jede Welt bremst den Gegner auf ihre Art. Such dir deine zwei Lieblingswelten aus.</p>
+      </div>`);
+      ovi.querySelectorAll(".worldpick").forEach(b => b.addEventListener("click", () => {
+        const w = b.dataset.w, i = chosen.indexOf(w);
+        if (i >= 0) chosen.splice(i, 1); else if (chosen.length < 2) chosen.push(w);
+        Snd.click(); render();
+      }));
+      const go = $("#wpGo"); if (go && !go.disabled) go.addEventListener("click", () => { Snd.click(); cb(chosen.slice()); });
+    };
+    render();
+  };
+  pickFor(hot ? "Spieler 1" : "Du", w0 => {
+    if (hot) pickFor("Spieler 2", w1 => launchGame(hot, 2, true, [w0, w1]));
+    else launchGame(hot, 2, true, [w0, randomTwoWorlds()]);
+  });
 }
 
 function deckStack(n) {
@@ -404,11 +499,7 @@ function cardEl(card, { back = false, small = false } = {}) {
   const d = document.createElement("div");
   d.className = "card" + (back ? " back" : "");
   d.style.backgroundImage = `url("${back ? CARD_BACK : card.img}")`;
-  if (!back && card && card.kraft) {
-    const c = document.createElement("div"); c.className = "cost";
-    for (let i = 0; i < card.cost; i++) c.appendChild(document.createElement("i"));
-    d.appendChild(c);
-  }
+  // Kosten-Quadrate entfernt: das Karten-Artwork zeigt die Kanister-Kosten bereits.
   return d;
 }
 
@@ -416,15 +507,47 @@ function cardEl(card, { back = false, small = false } = {}) {
 // bezahlter Treibstoff/Batterie verschwindet sofort aus dem Zaehler, die gespielte Karte
 // verlaesst die Hand. Nur fuer die eigene Seite — beim Gegner wuerde das die Wahl verraten.
 function pendPlayUid(p) { const t = p.pending && p.pending.type; return (t === "build" || t === "booster" || t === "tow") ? p.pending.uid : null; }
+// Kleine Welt-Punkte neben dem Namen (nur Modul 3): zeigt, welche 2 Weltkraefte dieser Spieler hat.
+function worldBadges(p) {
+  if (!game.opts.worldPowers) return "";
+  const ws = (game.opts.worlds || [])[p.idx] || [];
+  return ' ' + ws.map(w => `<i class="wdot" title="${(WORLD_POWERS[w] || {}).label || w}" style="background:${WORLD_COLORS[w] || "#888"}"></i>`).join("");
+}
 function dispFuel(p) { if (p.pending && p.pending.type === "build") { const c = game.handCard(p, p.pending.uid); if (c) return Math.max(0, p.fuel - c.cost); } return p.fuel; }
 function dispBat(p) { return (p.pending && p.pending.type === "build" && p.pending.turbo && p.bat > 0) ? Math.max(0, p.bat - 1) : p.bat; }
+
+// Modul 3: "power"-Events -> Gegner-Zaehler rot aufblitzen + Minus-Zahl schweben lassen.
+function drainFx(ev) {
+  if (!game || !game.opts.worldPowers) return;
+  const powers = (ev || []).filter(e => e.t === "power");
+  if (!powers.length) return;
+  const sum = {};   // Opfer-Index -> {fuel, bat}
+  for (const e of powers) {
+    const pw = WORLD_POWERS[e.world] || {}, v = 1 - e.i;
+    const s = sum[v] || (sum[v] = { fuel: 0, bat: 0 });
+    s.fuel += pw.foeFuel || 0; s.bat += pw.foeBat || 0;
+  }
+  let any = false;
+  for (const v in sum) {
+    const s = sum[v], side = (+v === persp) ? "#meArea" : "#oppArea";
+    const hit = (selc, amt) => {
+      const el = $(side + " " + selc); if (!el || !amt) return;
+      el.classList.add("drainhit"); setTimeout(() => { if (el.classList) el.classList.remove("drainhit"); }, 720);
+      const r = el.getBoundingClientRect && el.getBoundingClientRect();
+      if (r && typeof floatText === "function") floatText(r.left + r.width / 2, r.top + 4, "−" + amt, "#ff7a7a", true);
+      any = true;
+    };
+    hit(".tank", s.fuel); hit(".batt", s.bat);
+  }
+  if (any && Snd.tick) Snd.tick();
+}
 
 function renderBoard() {
   const me = game.players[persp], op = game.players[1 - persp];
   // Info
   const meA = $("#meArea"), opA = $("#oppArea");
-  meA.querySelector(".pname").textContent = me.name;
-  opA.querySelector(".pname").textContent = op.name;
+  meA.querySelector(".pname").innerHTML = me.name + worldBadges(me);
+  opA.querySelector(".pname").innerHTML = op.name + worldBadges(op);
   for (const [area, p, isMe] of [[meA, me, true], [opA, op, false]]) {
     const f = isMe ? dispFuel(p) : p.fuel, b = isMe ? dispBat(p) : p.bat;
     area.querySelector(".tank").innerHTML = gauge("assets/kanister.png", f, TANK_MAX);
@@ -438,8 +561,8 @@ function renderBoard() {
   for (let i = 0; i < op.hand.length; i++) oh.appendChild(cardEl(null, { back: true }));
 
   // Slots (stehende Maschinen)
-  slotRenderPre($("#oppSlot"), op);
-  slotRenderPre($("#meSlot"), me);
+  slotRenderPre($("#oppSlot"), op, true);   // Gegnerwahl verdeckt halten (kein Leak vor dem Aufdecken)
+  slotRenderPre($("#meSlot"), me, false);
   if ($("#meDeck")) $("#meDeck").innerHTML = deckStack(me.deck.length);
   if ($("#oppDeck")) $("#oppDeck").innerHTML = deckStack(op.deck.length);
 
@@ -463,9 +586,17 @@ function pips(box, val, max, cls) {
 }
 
 // Vor dem Aufdecken: stehende Maschine offen, neu gespielte Karte verdeckt (Rueckseite).
-function slotRenderPre(el, p) {
+// hideChoice=true (Gegnerseite): JEDE getroffene Wahl sieht gleich aus (verdeckte Karte) — auch "sparen".
+// Sonst wuerde man vor dem eigenen Zug sehen, ob der Gegner baut oder spart (Info-Leak).
+function slotRenderPre(el, p, hideChoice) {
+  // Stehende Maschine, die weiterkaempft: immer offen sichtbar (oeffentlicher Spielstand).
   if (p.slot && (!p.pending || p.pending.type === "none")) { slotShow(el, p.slot, p.slotTurbo); return; }
   const t = p.pending && p.pending.type;
+  if (hideChoice) {
+    // Gegner hat (verdeckt) gewaehlt: bauen ODER sparen -> identische Rueckseite, kein Leak.
+    if (p.pending) { el.innerHTML = ""; el.classList.remove("empty"); const c = cardEl(null, { back: true }); c.classList.add("pending"); el.appendChild(c); return; }
+    slotShow(el, p.slot, p.slotTurbo); return;   // noch nicht gewaehlt (z. B. Hotseat)
+  }
   if (t === "build" || t === "booster" || t === "tow") {
     el.innerHTML = ""; el.classList.remove("empty");
     const c = cardEl(null, { back: true }); c.classList.add("pending");
@@ -855,6 +986,7 @@ async function revealAndResolve() {
   } else if (!towed) {
     flash("Nichts passiert");
   }
+  drainFx(ev);   // Modul 3: Brems-Effekte sichtbar machen (Gegner verliert Kanister/Batterie)
   const win = ev.find(e => e.t === "win");
   await sleep(win ? 1900 : 2600);   // Zahlen/Kristall stehen ~2,2 s -> Ergebnis nicht vorher wegnehmen
   advance();
@@ -912,12 +1044,17 @@ function playFullscreenVideo(src, onDone) {
 function winScreen() {
   const w = game.players[game.winner];
   const humanWon = !w.isAI;
+  // Nur Siege gegen den Computer zaehlen fuer die Freischaltung.
+  const unlocked = (humanWon && cfg.mode === "ai") ? Prog.addWin(cfg.modules) : 0;
+  if (humanWon && cfg.mode === "ai") applyProgression();
   const show = () => {
     FX.rain(); FX.burst(innerWidth / 2, innerHeight / 2, "255,207,63", 60, { spread: 14, g: 0.12 }); shake(1.4);
     humanWon ? Snd.win() : Snd.lose();
+    const unlockMsg = unlocked ? `<div class="unlockbanner">🎉 ${MOD_LABEL[unlocked]} freigeschaltet!</div>` : "";
     showOverlay(`<div class="winbanner">🏆 ${w.name} ${w.name === "Du" ? "gewinnst" : "gewinnt"}!</div>
       <div class="wingems">${"◆".repeat(w.crystals)}</div>
       <p>${w.crystals} Kristalle gesammelt in ${game.round} Runden.</p>
+      ${unlockMsg}
       <div class="incpick" style="margin-top:16px">
         <button class="pbtn pagain pbig-btn" id="againBtn" title="Nochmal spielen" aria-label="Nochmal spielen"><span class="picon">${ICON.again}</span></button>
         <button class="pbtn phome pghost pbig-btn" id="menu2" title="Zurück zum Menü" aria-label="Zurück zum Menü"><span class="picon">${ICON.home}</span></button>
