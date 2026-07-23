@@ -1193,5 +1193,7 @@ const TUT = {
   },
 };
 if ($("#learnBtn")) $("#learnBtn").addEventListener("click", () => { Snd.resume(); Snd.click(); TUT.start(); });
+// Erklaervideo als Vollbild abspielen (danach zurueck ins Menue).
+if ($("#videoBtn")) $("#videoBtn").addEventListener("click", () => { Snd.resume(); Snd.click(); playFullscreenVideo("assets/erklaervideo.mp4", () => {}); });
 // Beim allerersten Start das Tutorial anbieten (sobald das Menue sichtbar ist).
 if (!TUT.seen()) setTimeout(() => { if ($("#menu") && !$("#menu").classList.contains("hidden") && (!ov || ov.classList.contains("hidden"))) TUT.offer(); }, 2200);

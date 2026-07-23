@@ -676,6 +676,7 @@ body.playing #introwrap{opacity:0}
 
       <button id="startBtn" class="big">Spiel starten</button>
       <button id="learnBtn" class="big ghostbtn">🎓 Lernen (Tutorial)</button>
+      <button id="videoBtn" class="big ghostbtn">🎬 Erklärvideo ansehen</button>
       <p class="hint">Grosse Maschine bleibt stehen und kämpft jede Runde weiter — aber sie zu bauen kostet Sparen. Wer zuerst genug Kristalle sammelt, gewinnt.</p>
     </div>
   </section>
@@ -2509,6 +2510,8 @@ const TUT = {
   },
 };
 if ($("#learnBtn")) $("#learnBtn").addEventListener("click", () => { Snd.resume(); Snd.click(); TUT.start(); });
+// Erklaervideo als Vollbild abspielen (danach zurueck ins Menue).
+if ($("#videoBtn")) $("#videoBtn").addEventListener("click", () => { Snd.resume(); Snd.click(); playFullscreenVideo("assets/erklaervideo.mp4", () => {}); });
 // Beim allerersten Start das Tutorial anbieten (sobald das Menue sichtbar ist).
 if (!TUT.seen()) setTimeout(() => { if ($("#menu") && !$("#menu").classList.contains("hidden") && (!ov || ov.classList.contains("hidden"))) TUT.offer(); }, 2200);
 </script>
