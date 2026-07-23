@@ -1,6 +1,6 @@
 // KOSMOBAGGER PWA Service-Worker.
 // App-Shell NETWORK-FIRST (online aktuell), Medien CACHE-FIRST (offline). Version bei Release erhoehen.
-const CACHE = "kosmobagger-v39";
+const CACHE = "kosmobagger-v40";
 const ASSETS = [
   "./",
   "index.html",
@@ -83,6 +83,35 @@ self.addEventListener("install", e => {
 self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener("fetch", e => {
   const req = e.request; if (req.method !== "GET") return;
+
+  // VIDEO-STREAMING: iOS/Safari holt Video per HTTP-Range. Aus dem Cache kaeme sonst faelschlich eine
+  // ganze 200-Antwort statt 206 -> die Wiedergabe stockt/setzt staendig neu an. Wir beantworten
+  // Range-Anfragen korrekt mit 206 (aus dem Cache, sonst Netz) -> fluessig, auch offline.
+  if (req.headers.has("range")) {
+    e.respondWith((async () => {
+      const range = req.headers.get("range") || "";
+      const m = /bytes=(\d+)-(\d*)/.exec(range);
+      const cached = await caches.match(req.url, { ignoreVary: true, ignoreSearch: false });
+      if (!cached || !m) return fetch(req);
+      const buf = await cached.arrayBuffer();
+      const total = buf.byteLength;
+      const start = parseInt(m[1], 10);
+      const end = m[2] ? Math.min(parseInt(m[2], 10), total - 1) : total - 1;
+      if (start >= total) return new Response(null, { status: 416, headers: { "Content-Range": `bytes */${total}` } });
+      const body = buf.slice(start, end + 1);
+      return new Response(body, {
+        status: 206,
+        headers: {
+          "Content-Type": cached.headers.get("Content-Type") || "video/mp4",
+          "Content-Range": `bytes ${start}-${end}/${total}`,
+          "Content-Length": String(body.byteLength),
+          "Accept-Ranges": "bytes",
+        },
+      });
+    })());
+    return;
+  }
+
   const isMedia = /\.(png|jpe?g|webp|gif|svg|wav|mp3|ogg|mp4|webm|woff2?)$/i.test(new URL(req.url).pathname);
   if (isMedia) {
     e.respondWith(caches.match(req).then(hit => hit || fetch(req).then(res => { const c = res.clone(); caches.open(CACHE).then(ca => ca.put(req, c)).catch(()=>{}); return res; })));
