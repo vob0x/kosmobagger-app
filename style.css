@@ -613,3 +613,93 @@ body.playing #introwrap{opacity:0}
 .tutoffer h2{margin:.1em 0 .3em}
 .tutofferbtns{display:flex;flex-direction:column;gap:10px}
 .tutofferbtns .big{margin-top:0}
+
+/* ============================================================
+   CARTOON-UI  — Karten-Look fuer die Bedienelemente:
+   dicke Rundungen, Creme-Rahmen, 3D-Druckknopf-Kanten, Gold wie
+   auf den Karten. Steht bewusst am Dateiende -> ueberschreibt oben.
+   ============================================================ */
+:root{
+  --toon-cream:#ffe9c2; --gold-hi:#ffd85e; --gold-lo:#f5a81c; --gold-edge:#b9761a;
+  --w-kosmos:#3b6fd6; --w-bau:#e6a81f; --w-trucks:#d33b34; --w-technik:#37a85a;
+}
+/* Menue-Panel als kraeftiger Cartoon-Rahmen */
+.menu-box{
+  border:3px solid rgba(255,233,194,.5); border-radius:30px;
+  background:linear-gradient(180deg, rgba(40,52,92,.94), rgba(20,28,52,.95));
+  box-shadow:0 22px 60px rgba(0,0,0,.6), inset 0 3px 0 rgba(255,255,255,.15), inset 0 -7px 0 rgba(0,0,0,.3);
+}
+.menu-box h1{ text-shadow:0 3px 0 rgba(0,0,0,.35), 0 0 22px rgba(255,180,40,.35); }
+.opt>label{ color:#ffd98a; font-weight:800; letter-spacing:1.5px; }
+
+/* Segment-Buttons: chunky Toon-Pillen mit 3D-Unterkante */
+.seg{gap:10px}
+.seg button{
+  min-width:92px; padding:12px 12px; border-radius:16px;
+  border:2.5px solid rgba(255,233,194,.22);
+  background:linear-gradient(180deg,#2c3a63,#1b2444);
+  color:#e7edff; font-weight:800; letter-spacing:.2px;
+  box-shadow:0 4px 0 rgba(0,0,0,.5), 0 8px 13px rgba(0,0,0,.35), inset 0 2px 0 rgba(255,255,255,.10);
+  transition:transform .08s, box-shadow .08s, filter .12s;
+}
+.seg button:hover{ border-color:rgba(255,233,194,.42); filter:brightness(1.06); }
+.seg button:active{ transform:translateY(3px); box-shadow:0 1px 0 rgba(0,0,0,.5), inset 0 2px 0 rgba(255,255,255,.10); }
+.seg button.on{
+  background:linear-gradient(180deg,var(--gold-hi),var(--gold-lo)); color:#2a1c07; border-color:#fff2cf;
+  box-shadow:0 5px 0 var(--gold-edge), 0 11px 16px rgba(245,168,28,.5), inset 0 2px 0 rgba(255,255,255,.55);
+  filter:none;
+}
+.seg button.on:active{ transform:translateY(3px); box-shadow:0 2px 0 var(--gold-edge), inset 0 2px 0 rgba(255,255,255,.55); }
+.seg button.locked{ opacity:.7; }
+
+/* Primaerknopf "Spiel starten": dicker Gold-Toon-Knopf */
+.big{
+  border-radius:20px; border:3px solid #fff2cf; font-weight:900; letter-spacing:.4px;
+  background:linear-gradient(180deg,var(--gold-hi),var(--gold-lo)); color:#2a1c07;
+  box-shadow:0 7px 0 var(--gold-edge), 0 15px 22px rgba(245,168,28,.45), inset 0 2px 0 rgba(255,255,255,.6);
+  transition:transform .08s, box-shadow .08s, filter .12s;
+}
+.big:hover{ filter:brightness(1.05); }
+.big:active{ transform:translateY(4px); box-shadow:0 3px 0 var(--gold-edge), inset 0 2px 0 rgba(255,255,255,.6); }
+
+/* Sekundaerknoepfe (Lernen, Erklaervideo): dunkle Toon-Knoepfe */
+.big.ghostbtn{
+  background:linear-gradient(180deg,#34426e,#212a4c); color:#eaf0ff; border:3px solid rgba(255,233,194,.34);
+  box-shadow:0 6px 0 rgba(0,0,0,.5), 0 12px 18px rgba(0,0,0,.4), inset 0 2px 0 rgba(255,255,255,.12);
+}
+.big.ghostbtn:active{ transform:translateY(4px); box-shadow:0 2px 0 rgba(0,0,0,.5), inset 0 2px 0 rgba(255,255,255,.12); }
+
+/* Menue-Knopf im Spiel: chunky */
+#menuBtn{
+  width:36px; height:34px; border-radius:12px; border:2.5px solid rgba(255,233,194,.35);
+  background:linear-gradient(180deg,#34426e,#212a4c);
+  box-shadow:0 3px 0 rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.14);
+}
+/* Overlay-Panel als Toon-Rahmen */
+#overlay-inner{
+  border:3px solid rgba(255,233,194,.5); border-radius:26px;
+  box-shadow:0 24px 70px rgba(0,0,0,.65), inset 0 3px 0 rgba(255,255,255,.14), inset 0 -7px 0 rgba(0,0,0,.3);
+}
+/* In-Game Aktionsleiste (Nicht-Piktogramm-Buttons) im Toon-Stil */
+#actionbar button:not(.pbtn){
+  border-radius:16px; border:2.5px solid #fff2cf; font-weight:800;
+  background:linear-gradient(180deg,var(--gold-hi),var(--gold-lo)); color:#2a1c07;
+  box-shadow:0 5px 0 var(--gold-edge), 0 10px 16px rgba(245,168,28,.45), inset 0 2px 0 rgba(255,255,255,.5);
+}
+#actionbar button.ghost:not(.pbtn){
+  background:linear-gradient(180deg,#34426e,#212a4c); color:#eaf0ff; border-color:rgba(255,233,194,.3);
+  box-shadow:0 5px 0 rgba(0,0,0,.5), inset 0 2px 0 rgba(255,255,255,.12);
+}
+#actionbar button:not(.pbtn):active{ transform:translateY(3px); }
+/* Bauplatz-Label als Toon-Schildchen */
+.slotlabel{
+  background:rgba(20,28,52,.72); border:2px solid rgba(255,233,194,.3); border-radius:10px;
+  padding:2px 10px; color:#ffe9c2; box-shadow:0 2px 0 rgba(0,0,0,.4);
+}
+/* Spieler-Namensschild als Toon-Badge (dezent, bricht die schmale HUD nicht) */
+.pname{
+  background:linear-gradient(180deg,#34426e,#212a4c); border:2px solid rgba(255,233,194,.3);
+  border-radius:11px; padding:2px 9px; box-shadow:0 2px 0 rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.12);
+}
+.side.me .pname{ border-color:rgba(123,161,255,.65); }
+.side.opp .pname{ border-color:rgba(226,86,74,.6); }

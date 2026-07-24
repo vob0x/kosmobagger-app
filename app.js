@@ -1023,22 +1023,32 @@ function playFullscreenVideo(src, onDone) {
   // Sieg/Niederlage laufen NACH Nutzer-Interaktion -> Ton-Autoplay ist erlaubt. Erst MIT Ton
   // versuchen; falls der Browser blockt, stumm weiterlaufen und "Antippen fuer Ton" zeigen.
   v.src = src; v.autoplay = true; v.muted = false; v.playsInline = true; v.preload = "auto";
-  if (v.setAttribute) v.setAttribute("playsinline", "");
+  if (v.setAttribute) { v.setAttribute("playsinline", ""); v.setAttribute("webkit-playsinline", ""); }
   const skip = document.createElement("button"); skip.className = "fsskip"; skip.textContent = "Weiter ▸";
   const snd = document.createElement("div"); snd.className = "fssound"; snd.textContent = "🔊 Antippen für Ton";
   sp.appendChild(v); sp.appendChild(skip); sp.appendChild(snd);
   document.body.appendChild(sp);
-  let done = false;
-  const end = () => { if (done) return; done = true; sp.classList.add("gone"); setTimeout(() => sp.remove && sp.remove(), 450); go(); };
+  let done = false, watchdog = 0, startGuard = 0, lastProgress = Date.now();
+  const cleanup = () => { if (watchdog) { clearInterval(watchdog); watchdog = 0; } if (startGuard) { clearTimeout(startGuard); startGuard = 0; } };
+  const end = () => { if (done) return; done = true; cleanup(); sp.classList.add("gone"); setTimeout(() => sp.remove && sp.remove(), 450); go(); };
   v.addEventListener("ended", end);
   v.addEventListener("error", end);
-  v.addEventListener("loadedmetadata", () => { if (v.duration && isFinite(v.duration)) setTimeout(end, v.duration * 1000 + 250); });
+  // WICHTIG: KEINE feste Wanduhr-Abschaltung. Frueher beendete ein Timer auf Videolaenge (bzw. 15s)
+  // das Video hart -> auf Mobile schnitt jedes Puffern den Film mittendrin ab. Jetzt endet er nur
+  // bei "ended"/"error", plus zwei robuste Waechter:
+  //  - startGuard: laedt in 20s KEINE Metadaten (Datei fehlt/kaputt) -> weiter.
+  //  - Stall-Waechter: nur beenden, wenn die Wiedergabe wirklich haengt (kein Fortschritt >25s).
+  //    Normales Puffern verschiebt lastProgress und unterbricht daher NICHT.
+  startGuard = setTimeout(() => { if (v.readyState < 1) end(); }, 20000);
+  const bump = () => { lastProgress = Date.now(); };
+  v.addEventListener("timeupdate", bump);
+  v.addEventListener("playing", () => { bump(); if (startGuard) { clearTimeout(startGuard); startGuard = 0; } });
+  watchdog = setInterval(() => { if (v.ended) return end(); if (Date.now() - lastProgress > 25000) end(); }, 3000);
   skip.addEventListener("click", e => { e.stopPropagation(); end(); });
   sp.addEventListener("click", () => { if (v.muted) { v.muted = false; const q = v.play && v.play(); if (q && q.catch) q.catch(() => {}); snd.classList.add("gone"); } });
   const p = v.play();
   if (p && p.then) p.then(() => { snd.classList.add("gone"); })   // Ton laeuft -> Pille weg
     .catch(() => { v.muted = true; const q = v.play && v.play(); if (q && q.catch) q.catch(() => {}); }); // blockiert -> stumm, Pille bleibt
-  setTimeout(end, 15000);
 }
 
 function winScreen() {
