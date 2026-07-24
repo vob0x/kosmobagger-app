@@ -1,0 +1,9 @@
+Fredoka
+Copyright (c) The Fredoka Project Authors (https://github.com/hafontia/Fredoka)
+
+Diese Schrift ist unter der SIL Open Font License, Version 1.1 lizenziert.
+Volltext: https://openfontlicense.org  /  https://scripts.sil.org/OFL
+
+Eingebunden ist nur das Latin-Subset im Schnitt 700 (fredoka-700.woff2),
+bezogen ueber die Google Fonts API. Die OFL erlaubt Einbettung, Bundling
+und Weitergabe zusammen mit dieser Lizenzdatei.

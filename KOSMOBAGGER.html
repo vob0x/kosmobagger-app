@@ -14,6 +14,12 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="KOSMOBAGGER" />
 <style>
+/* Runde Cartoon-Display-Schrift, lokal gebundlet (offline-tauglich). Fredoka, SIL OFL 1.1. */
+@font-face{
+  font-family:'Fredoka';
+  src:url('assets/fonts/fredoka-700.woff2') format('woff2');
+  font-weight:400 900; font-style:normal; font-display:swap;
+}
 :root{
   --bg0:#0b1020; --bg1:#141c33; --panel:#1b2440; --line:#2c3960;
   --ink:#eef2ff; --dim:#9fb0d6; --gold:#ffcf3f; --good:#37c86a; --bad:#ff5a5a;
@@ -719,6 +725,15 @@ body.playing #introwrap{opacity:0}
 }
 .side.me .pname{ border-color:rgba(123,161,255,.65); }
 .side.opp .pname{ border-color:rgba(226,86,74,.6); }
+
+/* Display-Schrift auf die verspielten Texte legen (Fliesstext/Hinweise bleiben System-Schrift) */
+.menu-box h1, .opt>label, .seg button, .big, #menuBtn,
+#actionbar button:not(.pbtn), #centerMsg, .slotlabel, .pname,
+.winbanner, #overlay-inner h2, .unlockbanner, .slotlabel, .tutoffer h2{
+  font-family:'Fredoka', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+.menu-box h1{ letter-spacing:1px; }
+.seg button{ letter-spacing:.2px; }
 
 </style>
 </head>
