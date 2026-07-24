@@ -98,7 +98,13 @@ export class Game {
   }
 
   aiIncome(p) {
-    // Batterie holen, wenn Tank schon ordentlich gefuellt und Batteriefach Platz hat.
+    const level = p._level ?? this.opts.aiLevel ?? 0.85;   // _level: optionale Per-Spieler-Staerke (Simulation)
+    const banks = level >= 0.93;                       // NUR Stark spart gezielt auf grosse Maschinen (Mittel = Greedy)
+    const hasBig = p.hand.some(c => c.kraft >= 5);
+    // BANKING: Treibstoff sammeln, solange eine grosse Maschine (5-6) wartet, das eigene Brett frei ist
+    // und der Tank noch nicht voll ist -> ermoeglicht das Deployen einer dominanten stehenden Maschine.
+    if (banks && hasBig && !p.slot && p.fuel < TANK_MAX) return "fuel";
+    // Sonst: Batterie holen, wenn Tank schon ordentlich gefuellt und Platz ist (z.B. waehrend die Maschine steht).
     if (this.opts.modules >= 2 && p.bat < BAT_MAX && p.fuel >= 2) return "bat";
     if (p.fuel < TANK_MAX) return "fuel";
     if (p.bat < BAT_MAX) return "bat";
@@ -295,52 +301,83 @@ export class Game {
     }
   }
 
-  // --- KI: waehlt eine Aktion (greedy Spar-/Konter-Strategie) ---
+  // --- KI: waehlt eine Aktion. DREI qualitativ unterschiedliche Spielstaerken ---
+  //   Leicht  : verheizt kleine Maschinen, macht oft Fehlzuege, vergeudet Batterien, spart nie.
+  //   Mittel  : solide Greedy (billigste ausreichende Maschine, mass Batterie-Einsatz), gelegentliche Fehler.
+  //   Stark   : SPART Treibstoff fuer dominante 5-6er, haelt/verteidigt die stehende Maschine mit Batterie,
+  //             raeumt gegnerische Waende per Abschlepper ab, verhindert gegnerische Punkte, Mirror-Turbo.
   aiChoose(p) {
     const i = p.idx, o = this.opp(i);
     const acts = this.legalActions(i);
-    if (acts.length === 1) return acts[0];                 // z.B. slot besetzt -> none
+    if (acts.length === 1) return acts[0];                 // z.B. slot besetzt -> none (Maschine bleibt zwangslaeufig stehen)
     const affordable = p.hand.filter(c => c.kraft && c.cost <= p.fuel);
-    const level = this.opts.aiLevel ?? 0.85;
-    if (Math.random() > level) {                            // Schwaeche: manchmal zufaellig
-      const pool = acts.filter(a => a.type === "build");
-      if (pool.length) return pool[Math.floor(Math.random() * pool.length)];
-    }
-    const gk = o.slot ? o.slot.kraft : null;               // stehende Gegnermaschine
+    const level = p._level ?? this.opts.aiLevel ?? 0.85;   // _level: optionale Per-Spieler-Staerke (Simulation)
+    const STARK  = level >= 0.93;
+    const MITTEL = !STARK && level >= 0.75;
+    const LEICHT = !STARK && !MITTEL;
+    const blunder = LEICHT ? 0.42 : (MITTEL ? 0.15 : 0.02);
     const behind = p.crystals <= o.crystals;
+    const gk = o.slot ? o.slot.kraft : null;               // stehende Gegnermaschine (Turbo ist nach dem Kampf verbraucht)
+    const bigInHand = p.hand.filter(c => c.kraft >= 5);
+    const build = (c, turbo) => ({ type: "build", uid: c.uid, turbo: !!(turbo && p.bat > 0) });
+    const biggest = arr => arr.slice().sort((x, y) => y.kraft - x.kraft || x.cost - y.cost)[0];
+    const towAct = acts.find(a => a.type === "tow" && a.mode === "tow");
+    const boostAct = acts.find(a => a.type === "booster");
+    const plusAct = acts.find(a => a.type === "tow" && a.mode === "plus");
 
-    // Gegen eine stehende Wand, die ich nicht packe: Abschlepper (falls vorhanden)
-    if (gk !== null) {
-      const canBeat = affordable.some(c => c.kraft > gk || (p.bat > 0 && c.kraft + 2 > gk));
-      const canTie = affordable.some(c => c.kraft === gk || (p.bat > 0 && c.kraft + 2 === gk));
-      const tow = acts.find(a => a.type === "tow" && a.mode === "tow");
-      if (tow && !canBeat && !canTie && gk >= 4) return tow;
-      // schlagen (billigste ausreichende), sonst gleichziehen
-      const beats = affordable.filter(c => c.kraft > gk);
-      const ties = affordable.filter(c => c.kraft === gk);
-      if (beats.length) { const c = beats.sort((x, y) => x.cost - y.cost || x.kraft - y.kraft)[0]; return { type: "build", uid: c.uid, turbo: false }; }
-      if (p.bat > 0) {
-        const turboBeat = affordable.filter(c => c.kraft + 2 > gk && c.kraft <= gk);
-        if (turboBeat.length) { const c = turboBeat.sort((x, y) => y.kraft - x.kraft)[0]; return { type: "build", uid: c.uid, turbo: true }; }
+    // --- FEHLZUG (schwaches Spiel): mit Wahrscheinlichkeit "blunder" eine schwache Aktion ---
+    if (Math.random() < blunder) {
+      const cards = acts.filter(a => a.type === "build").map(a => this.handCard(p, a.uid)).filter(Boolean);
+      if (cards.length) {
+        const pick = LEICHT ? cards.slice().sort((x, y) => x.kraft - y.kraft)[0]      // Leicht: kleinste (verschwendet)
+                            : cards[Math.floor(Math.random() * cards.length)];        // Mittel: irgendeine
+        return build(pick, LEICHT ? false : (p.bat > 0 && Math.random() < 0.3));       // Mittel vergeudet manchmal Batterie
       }
-      if (ties.length) { const c = ties[0]; return { type: "build", uid: c.uid, turbo: false }; }
     }
 
-    if (affordable.length) {
-      // Kein Gegner steht: groesste bezahlbare Maschine bauen (Sparen zahlt sich aus)
-      const c = affordable.sort((x, y) => y.kraft - x.kraft)[0];
-      const turbo = this.opts.modules >= 2 && p.bat > 0 && behind && c.kraft >= 4;
-      return { type: "build", uid: c.uid, turbo };
+    // --- Gegner steht: erobern / abschleppen / gleichziehen (gegnerischen Punkt verhindern!) ---
+    if (gk !== null) {
+      const beat = affordable.filter(c => c.kraft > gk).sort((x, y) => x.cost - y.cost || x.kraft - y.kraft)[0];
+      if (beat) return build(beat, false);                                             // billigste ausreichende Maschine
+      if (p.bat > 0) {                                                                  // Wand mit Batterie brechen
+        const tb = affordable.filter(c => c.kraft + 2 > gk).sort((x, y) => x.cost - y.cost || y.kraft - x.kraft)[0];
+        const useBat = STARK || (MITTEL && (behind || gk >= 5));
+        if (tb && useBat) return build(tb, true);
+      }
+      if (towAct && (STARK || MITTEL || gk >= 4)) return towAct;                        // Abschlepper raeumt die Wand ab
+      const tie = affordable.filter(c => c.kraft === gk).sort((x, y) => x.cost - y.cost)[0];
+      if (tie) return build(tie, false);                                               // gleichziehen -> beide in Garage, verhindert Score
+      // wirklich nicht kontaktierbar -> unten Ressourcen sammeln (Gegner punktet leider)
+    } else {
+      // --- Gegner steht NICHT: eigene Maschine aufs Brett bringen ---
+      const bigAff = affordable.filter(c => c.kraft >= 5);
+      if (bigAff.length) {
+        const c = biggest(bigAff);
+        // Stark: droht ein Spiegel-6 (Gegner hat vollen Tank)? Turbo, um den Gleichstand zu gewinnen und stehen zu bleiben.
+        const mirror = STARK && p.bat > 0 && o.fuel >= 3 && c.kraft >= 6;
+        return build(c, mirror);
+      }
+      // Keine grosse bezahlbar, aber eine im Blatt + fast genug Treibstoff -> BANKEN statt eine kleine zu verheizen (NUR Stark).
+      if (STARK && bigInHand.length && p.fuel >= 2) {
+        if (boostAct) return boostAct;                                                  // Booster: Ressource sammeln waehrend des Sparens
+        if (STARK && plusAct) return plusAct;
+        return { type: "pass" };
+      }
+      // Sonst: groesste bezahlbare bauen (etwas aufs Brett bringen, um zu punkten).
+      if (affordable.length) {
+        const c = biggest(affordable);
+        const turbo = (STARK || MITTEL) && p.bat > 0 && behind && c.kraft >= 4 && this.opts.modules >= 2;
+        return build(c, turbo);
+      }
     }
-    // Nichts bezahlbar: Reparieren > Booster > Abschlepper-Plus > Pass
+
+    // --- Nichts Sinnvolles baubar: Reparieren > Booster > Abschlepper-Plus > Pass ---
     if (acts.some(a => a.type === "repair")) {
       const best = p.garage.filter(c => c.kraft).sort((x, y) => y.kraft - x.kraft)[0];
       return best ? { type: "repair", uid: best.uid } : { type: "repair" };
     }
-    const boost = acts.find(a => a.type === "booster");
-    if (boost) return boost;
-    const plus = acts.find(a => a.type === "tow" && a.mode === "plus");
-    if (plus) return plus;
+    if (boostAct) return boostAct;
+    if (plusAct) return plusAct;
     return { type: "pass" };
   }
 }
