@@ -828,9 +828,9 @@ function promptIncome(human) {
       <span title="Kristalle">${gauge("assets/kristall.png", human.crystals, game.opts.target, true)}</span>
     </div>`;
   showOverlay(`<h2>Einkommen</h2><p>Nimm eines pro Runde — dein Vorrat:</p>${stat}
-    <div class="incpick">
-      <button class="pbtn pincome pfuel" id="inFuel" title="Kanister nehmen" aria-label="Kanister nehmen"><img class="pbig xl" src="assets/kanister.png" alt=""></button>
-      ${m2 ? `<button class="pbtn pincome pbat" id="inBat" title="Batterie nehmen" aria-label="Batterie nehmen"><img class="pbig xl" src="assets/batterie.png" alt=""></button>` : ""}
+    <div class="incpick incpick-lbl">
+      <div class="incopt"><button class="pbtn pincome pfuel" id="inFuel" title="Treibstoff nehmen" aria-label="Treibstoff nehmen"><img class="pbig xl" src="assets/kanister.png" alt=""></button><div class="pcap"><b>Treibstoff</b><span>Maschinen bauen</span></div></div>
+      ${m2 ? `<div class="incopt"><button class="pbtn pincome pbat" id="inBat" title="Batterie nehmen" aria-label="Batterie nehmen"><img class="pbig xl" src="assets/batterie.png" alt=""></button><div class="pcap"><b>Batterie</b><span>+2 Kraft im Kampf</span></div></div>` : ""}
     </div>`);
   const pick = async k => {
     game.setIncome(human.idx, k); hideOverlay();
@@ -859,6 +859,12 @@ function promptCommit(human) {
     ? "Karte auf deinen Bauplatz ziehen oder antippen — oder „Sparen“."
     : "Noch nicht genug Treibstoff ⛽ — diese Runde sparen und weiter sammeln.";
   $("#actionbar").appendChild(hint);
+  // Strategie-Nudge in den ersten Runden (Playtester wünschte sich Beispiele/Strategien)
+  if (game.round <= 2) {
+    const tip = document.createElement("div"); tip.className = "acthint acttip";
+    tip.textContent = "💡 Grössere Zahl gewinnt den Kampf. Spare Treibstoff für starke Maschinen (5–6), Batterien geben +2 für knappe Duelle.";
+    $("#actionbar").appendChild(tip);
+  }
   flash(`Runde ${game.round} · ${human.name}${human.name === "Du" ? " bist" : " ist"} dran`);
 }
 
