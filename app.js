@@ -277,6 +277,67 @@ const Prog = (() => {
   };
 })();
 const MOD_LABEL = { 1: "Modul 1 (Treibstoff)", 2: "Modul 2 (+ Batterien)", 3: "Modul 3 (+ Weltkräfte)" };
+
+// ---------- Erfolge / Sticker (im Geraet gespeichert) ----------
+// Kindgerechte Belohnungen. Nur Spiele gegen den Computer zaehlen. Speicherung: localStorage (mit Fallback).
+const ACHS = [
+  { id: "first",    emoji: "🏆", name: "Erster Sieg",      desc: "Gewinne dein erstes Spiel." },
+  { id: "streak3",  emoji: "🔥", name: "Drei in Folge",    desc: "Gewinne 3 Spiele hintereinander." },
+  { id: "streak5",  emoji: "⚡", name: "Fünf in Folge",    desc: "Gewinne 5 Spiele hintereinander." },
+  { id: "comeback", emoji: "💪", name: "Comeback",         desc: "Gewinne, obwohl der Gegner fast am Ziel war." },
+  { id: "shutout",  emoji: "🛡️", name: "Blütenweiß",       desc: "Gewinne, ohne dass der Gegner einen Kristall holt." },
+  { id: "fast",     emoji: "🚀", name: "Blitzsieg",        desc: "Gewinne besonders schnell." },
+  { id: "boss",     emoji: "👾", name: "Boss besiegt",     desc: "Gewinne gegen den starken Computer." },
+  { id: "worlds",   emoji: "🌍", name: "Weltenherrscher",  desc: "Gewinne ein Spiel mit Weltkräften (Modul 3)." },
+  { id: "veteran",  emoji: "🎖️", name: "Stammspieler",     desc: "Spiele 10 Partien." },
+];
+const Ach = (() => {
+  const KEY = "kb_ach";
+  const blank = () => ({ unlocked: {}, streak: 0, games: 0, wins: 0 });
+  const load = () => { try { return Object.assign(blank(), JSON.parse(localStorage.getItem(KEY) || "{}")); } catch (e) { return blank(); } };
+  const save = s => { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) {} };
+  return {
+    all: () => ACHS,
+    state: load,
+    count: () => Object.keys(load().unlocked || {}).length,
+    // Ergebnis einer Partie verbuchen. Gibt Liste NEU freigeschalteter Erfolge zurueck (Objekte aus ACHS).
+    record({ won, round, target, oppC, level, modules }) {
+      const s = load();
+      s.unlocked = s.unlocked || {};
+      s.games = (s.games || 0) + 1;
+      if (won) { s.wins = (s.wins || 0) + 1; s.streak = (s.streak || 0) + 1; }
+      else s.streak = 0;
+      const fresh = [];
+      const earn = id => { if (!s.unlocked[id]) { s.unlocked[id] = Date.now(); fresh.push(id); } };
+      if (won) {
+        earn("first");
+        if (s.streak >= 3) earn("streak3");
+        if (s.streak >= 5) earn("streak5");
+        if (oppC >= target - 1) earn("comeback");
+        if (oppC === 0) earn("shutout");
+        if (round <= target + 3) earn("fast");
+        if (level >= 0.9) earn("boss");
+        if (modules >= 3) earn("worlds");
+      }
+      if (s.games >= 10) earn("veteran");
+      save(s);
+      return fresh.map(id => ACHS.find(a => a.id === id)).filter(Boolean);
+    },
+  };
+})();
+// Erfolge-Uebersicht (Sticker-Sammlung): alle Erfolge, freigeschaltet farbig, sonst als Schloss.
+function showAchievements() {
+  const s = Ach.state(), u = s.unlocked || {};
+  const cells = Ach.all().map(a => {
+    const on = !!u[a.id];
+    return `<div class="achcell${on ? " on" : ""}"><div class="achbig">${on ? a.emoji : "🔒"}</div>`
+      + `<b>${a.name}</b><span>${a.desc}</span></div>`;
+  }).join("");
+  showOverlay(`<div class="achscreen"><h2>🏅 Erfolge <small>${Ach.count()}/${Ach.all().length}</small></h2>`
+    + `<div class="achgrid">${cells}</div>`
+    + `<button class="big" id="achClose">Zurück</button></div>`);
+  const c = $("#achClose"); if (c) c.onclick = () => { Snd.click(); hideOverlay(); };
+}
 function applyProgression() {
   const seg = document.querySelector('[data-opt="modules"]');
   if (!seg || !seg.querySelectorAll) return;
@@ -1081,14 +1142,25 @@ function winScreen() {
   // Nur Siege gegen den Computer zaehlen fuer die Freischaltung.
   const unlocked = (humanWon && cfg.mode === "ai") ? Prog.addWin(cfg.modules) : 0;
   if (humanWon && cfg.mode === "ai") applyProgression();
+  // Erfolge verbuchen (nur gegen den Computer; Sieg UND Niederlage, damit die Serie stimmt).
+  let freshAch = [];
+  if (cfg.mode === "ai") {
+    const foe = game.players.find(p => p.isAI) || game.players[1 - game.winner];
+    freshAch = Ach.record({ won: humanWon, round: game.round, target: game.opts.target,
+      oppC: foe ? foe.crystals : 0, level: cfg.ai, modules: cfg.modules });
+  }
   const show = () => {
     FX.rain(); FX.burst(innerWidth / 2, innerHeight / 2, "255,207,63", 60, { spread: 14, g: 0.12 }); shake(1.4);
     humanWon ? Snd.win() : Snd.lose();
     const unlockMsg = unlocked ? `<div class="unlockbanner">🎉 ${MOD_LABEL[unlocked]} freigeschaltet!</div>` : "";
+    const achMsg = freshAch.length ? `<div class="achunlocks"><div class="achunlead">Neuer Erfolg!</div>`
+      + freshAch.map(a => `<div class="achpop"><span class="achpe">${a.emoji}</span><span class="acht"><b>${a.name}</b>${a.desc}</span></div>`).join("")
+      + `</div>` : "";
     showOverlay(`<div class="winbanner">🏆 ${w.name} ${w.name === "Du" ? "gewinnst" : "gewinnt"}!</div>
       <div class="wingems">${"◆".repeat(w.crystals)}</div>
       <p>${w.crystals} Kristalle gesammelt in ${game.round} Runden.</p>
       ${unlockMsg}
+      ${achMsg}
       <div class="incpick" style="margin-top:16px">
         <button class="pbtn pagain pbig-btn" id="againBtn" title="Nochmal spielen" aria-label="Nochmal spielen"><span class="picon">${ICON.again}</span></button>
         <button class="pbtn phome pghost pbig-btn" id="menu2" title="Zurück zum Menü" aria-label="Zurück zum Menü"><span class="picon">${ICON.home}</span></button>
@@ -1229,5 +1301,7 @@ const TUT = {
 if ($("#learnBtn")) $("#learnBtn").addEventListener("click", () => { Snd.resume(); Snd.click(); TUT.start(); });
 // Erklaervideo als Vollbild abspielen (danach zurueck ins Menue).
 if ($("#videoBtn")) $("#videoBtn").addEventListener("click", () => { Snd.resume(); Snd.click(); playFullscreenVideo("assets/erklaervideo.mp4", () => {}); });
+// Erfolge-Sammlung anzeigen.
+if ($("#achBtn")) $("#achBtn").addEventListener("click", () => { Snd.resume(); Snd.click(); showAchievements(); });
 // Beim allerersten Start das Tutorial anbieten (sobald das Menue sichtbar ist).
 if (!TUT.seen()) setTimeout(() => { if ($("#menu") && !$("#menu").classList.contains("hidden") && (!ov || ov.classList.contains("hidden"))) TUT.offer(); }, 2200);

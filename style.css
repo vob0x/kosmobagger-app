@@ -585,6 +585,32 @@ body.playing #introwrap{opacity:0}
   box-shadow:0 8px 24px rgba(245,168,28,.5);animation:unlockpop .5s cubic-bezier(.2,1.3,.5,1)}
 @keyframes unlockpop{0%{transform:scale(.6);opacity:0}100%{transform:scale(1);opacity:1}}
 
+/* ==== Erfolge / Sticker ==== */
+.achunlocks{margin:12px auto 2px;max-width:340px}
+.achunlead{font-weight:800;color:var(--gold);letter-spacing:.06em;text-transform:uppercase;font-size:13px;margin-bottom:6px}
+.achpop{display:flex;align-items:center;gap:11px;text-align:left;margin:7px auto;padding:9px 13px;border-radius:13px;
+  background:linear-gradient(180deg,rgba(255,224,138,.16),rgba(245,168,28,.12));
+  box-shadow:inset 0 0 0 1.5px rgba(255,207,63,.5);animation:achpop .5s cubic-bezier(.2,1.3,.5,1)}
+.achpop .achpe{font-size:30px;line-height:1;filter:drop-shadow(0 2px 5px rgba(0,0,0,.5))}
+.achpop .acht{display:flex;flex-direction:column}
+.achpop .acht b{color:#fff;font-size:16px}
+.achpop .acht{color:#d7def0;font-size:12.5px}
+@keyframes achpop{0%{transform:scale(.5) rotate(-8deg);opacity:0}70%{transform:scale(1.12) rotate(2deg)}100%{transform:scale(1) rotate(0);opacity:1}}
+.achscreen h2{color:var(--gold);font-size:26px;margin:0 0 4px}
+.achscreen h2 small{font-size:15px;color:#aeb8d4;font-weight:700}
+.achgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px auto;max-width:520px}
+.achcell{padding:12px 8px;border-radius:14px;text-align:center;background:rgba(255,255,255,.05);
+  box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.09);opacity:.62}
+.achcell.on{opacity:1;background:linear-gradient(180deg,rgba(255,224,138,.14),rgba(245,168,28,.10));
+  box-shadow:inset 0 0 0 1.5px rgba(255,207,63,.55),0 6px 18px rgba(245,168,28,.25)}
+.achcell .achbig{font-size:34px;line-height:1;margin-bottom:5px;filter:drop-shadow(0 2px 5px rgba(0,0,0,.45))}
+.achcell.on .achbig{animation:achshine 2.4s ease-in-out infinite}
+@keyframes achshine{0%,100%{transform:scale(1)}50%{transform:scale(1.09)}}
+.achcell b{display:block;color:#fff;font-size:13.5px;margin-bottom:2px}
+.achcell span{display:block;color:#c2cbe4;font-size:11px;line-height:1.25}
+.achcell:not(.on) b{color:#c7cee0}
+@media (max-height:720px){.achgrid{gap:7px}.achcell{padding:8px 6px}.achcell .achbig{font-size:27px}.achcell span{display:none}}
+
 /* ==== Tutorial ==== */
 .big.ghostbtn{margin-top:10px;background:rgba(255,255,255,.08);color:#eaf0ff;
   box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.18);font-weight:700}
