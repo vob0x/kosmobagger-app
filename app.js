@@ -467,7 +467,7 @@ function pickWorlds(hot) {
         <h2>${who}: Wähle 2 Welten</h2>
         <div class="worldgrid">${cards}</div>
         <button id="wpGo" class="big"${chosen.length === 2 ? "" : " disabled"}>Weiter</button>
-        <p class="hint">Jede Welt bremst den Gegner auf ihre Art. Such dir deine zwei Lieblingswelten aus.</p>
+        <p class="hint">Jede Welt hat ihre eigene Spezialkraft. Such dir deine zwei Lieblingswelten aus.</p>
       </div>`);
       ovi.querySelectorAll(".worldpick").forEach(b => b.addEventListener("click", () => {
         const w = b.dataset.w, i = chosen.indexOf(w);
@@ -609,6 +609,11 @@ function slotShow(el, card, turbo) {
   if (card) {
     const c = cardEl(card); c.classList.add("idle");
     if (turbo) { const t = document.createElement("div"); t.className = "turbobadge"; t.textContent = "+2"; c.appendChild(t); }
+    // Weltkraft-Kampfbonus (z. B. Vollgas: Truck +1) sichtbar am stehenden Maschinen-Slot, sobald aktiv (ab Runde 2).
+    if (card.kraft && game && game.opts.worldPowers && (game.round || 0) >= (game.opts.powerStartRound ?? 2)) {
+      const pw = WORLD_POWERS[card.world];
+      if (pw && pw.selfKraft) { const b = document.createElement("div"); b.className = "buffbadge"; b.textContent = "+" + pw.selfKraft; b.title = pw.label; c.appendChild(b); }
+    }
     el.appendChild(c);
   }
 }
@@ -890,6 +895,13 @@ function pulseCrystals(i) {
   const c = area && area.querySelector(".crystals"); if (!c) return;
   c.classList.remove("pulse"); void c.offsetWidth; c.classList.add("pulse");
 }
+// Kristall-Zaehler SOFORT auf den neuen Stand bringen (Symbol auffuellen, nicht nur animieren) — Playtester-Wunsch
+function fillCrystalNow(i) {
+  const area = (i === persp) ? $("#meArea") : $("#oppArea");
+  const c = area && area.querySelector(".crystals"); if (!c) return;
+  const p = game.players[i];
+  c.innerHTML = gauge("assets/kristall.png", p.crystals, game.opts.target, true) + `<b>${p.crystals}/${game.opts.target}</b>`;
+}
 
 // ---------- Aufdecken & Kampf ----------
 async function revealAndResolve() {
@@ -970,7 +982,8 @@ async function revealAndResolve() {
     const sc = centerOf(sel);
     const thruCard = meScored ? d0.card : d1.card;
     const el = $(sel + " .card");
-    flash(`${game.players[score.i].name} kommt durch!`);
+    const scName = game.players[score.i].name, scKommt = scName === "Du" ? "kommst" : "kommt";
+    flash(`${scName} ${scKommt} durch!`);
     if (el) el.classList.add("through");
     Snd.place();
     worldFx(thruCard, sc);                                  // Anfahren
@@ -984,7 +997,8 @@ async function revealAndResolve() {
     // Grosser Kristall poppt an der Luecke auf und wandert dann in den Zaehler
     bigCrystalPop(gap.x, gap.y, meScored ? "#meArea .crystals" : "#oppArea .crystals");
     floatText(sc.x + 96, sc.y, "+1", "#8cebff", true);
-    flash(`${game.players[score.i].name} kommt durch — ein Kristall!`);
+    flash(`${scName} ${scKommt} durch — ein Kristall!`);
+    fillCrystalNow(score.i);   // Zaehler SOFORT auffuellen (nicht nur animieren) — Playtester-Wunsch
     pulseCrystals(score.i);
     await sleep(760);
     if (el) el.classList.remove("through");
@@ -1058,6 +1072,10 @@ function playFullscreenVideo(src, onDone) {
 }
 
 function winScreen() {
+  // Aufraeumen: keine haengengebliebenen Karten/Effekte aus der letzten Runde (Playtester-Bug: Karte blieb haengen)
+  ["#meSlot", "#oppSlot"].forEach(s => { const el = $(s); if (el) { el.innerHTML = ""; el.classList.add("empty"); } });
+  ["#meArea .handrow", "#oppArea .handrow", ".opphand"].forEach(s => { const el = document.querySelector(s); if (el) el.innerHTML = ""; });
+  document.querySelectorAll(".bigcrystal, .floattext, .worldfx").forEach(e => e.remove());
   const w = game.players[game.winner];
   const humanWon = !w.isAI;
   // Nur Siege gegen den Computer zaehlen fuer die Freischaltung.

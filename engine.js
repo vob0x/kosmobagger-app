@@ -11,7 +11,7 @@ export const BAT_MAX = 2;
 export const WORLD_POWERS = {
   KOSMOS:  { on: "score", foeFuel: 1,           label: "Störfeld",      text: "Kommt deine Kosmos-Maschine durch, verliert der Gegner 1 Kanister." },
   BAU:     { on: "build", foeFuel: 1,           label: "Erschütterung", text: "Baust du eine Bau-Maschine, verliert der Gegner 1 Kanister." },
-  TRUCKS:  { on: "stand", foeFuel: 1,           label: "Blockade",      text: "Solange dein Truck steht, verliert der Gegner jede Runde 1 Kanister." },
+  TRUCKS:  { selfKraft: 1,                       label: "Vollgas",       text: "Dein Truck kämpft mit +1 Kraft, solange er steht." },
   TECHNIK: { on: "win",   foeFuel: 2, foeBat: 1, label: "Entladung",    text: "Gewinnt deine Technik-Maschine, verliert der Gegner 2 Kanister und 1 Batterie." },
 };
 
@@ -120,7 +120,7 @@ export class Game {
     else if (p.bat < BAT_MAX) p.bat++;       // Tank voll -> Batterie als Ausweich
   }
 
-  needsIncome(i) { return this.opts.modules >= 2 && !this.players[i].income; }
+  needsIncome(i) { const p = this.players[i]; return this.opts.modules >= 2 && !p.income && !(p.fuel >= TANK_MAX && p.bat >= BAT_MAX); }
   needsCommit(i) { return !this.players[i].pending; }
   ready() { return this.players.every(p => p.income && p.pending); }
 
@@ -215,10 +215,13 @@ export class Game {
       }
     });
 
+    // "Held": Maschine stand schon VOR dieser Runde (nicht frisch gebaut) -> fuer Stellungs-Boni (selfKraftHeld).
+    this.players.forEach((p, i) => { p._held = !!(pre[i] && p.slot === pre[i]); });
+
     // 3) Kampf
     const a = this.players[0], b = this.players[1];
-    const ea = a.slot ? a.slot.kraft + (a.slotTurbo ? 2 : 0) : null;
-    const eb = b.slot ? b.slot.kraft + (b.slotTurbo ? 2 : 0) : null;
+    const ea = this._kraft(a);
+    const eb = this._kraft(b);
     const wp = this.opts.worldPowers;
     if (a.slot && b.slot) {
       if (ea > eb) {
@@ -268,15 +271,38 @@ export class Game {
     else { if (p.fuel < TANK_MAX) p.fuel++; else if (p.bat < BAT_MAX) p.bat++; }
   }
 
+  // Weltkraft-Kampfbonus einer Welt (selfKraft), rundengated. 0 wenn inaktiv. Fuer KI-Bewertung.
+  _wbuff(world) {
+    if (!this.opts.worldPowers || (this.round || 0) < (this.opts.powerStartRound ?? 2)) return 0;
+    const pw = this.powers[world];
+    return pw && pw.selfKraft ? pw.selfKraft : 0;
+  }
+
+  // Effektive Kampfkraft: Basiskraft + Turbo(+2) + optionaler Weltkraft-Bonus (selfKraft, rundengated).
+  _kraft(p) {
+    if (!p.slot) return null;
+    let k = p.slot.kraft + (p.slotTurbo ? 2 : 0);
+    if (this.opts.worldPowers && (this.round || 0) >= (this.opts.powerStartRound ?? 2)) {
+      const pw = this.powers[p.slot.world];
+      if (pw && pw.selfKraft) k += pw.selfKraft;                    // A: immer im Kampf (auch Baurunde)
+      if (pw && pw.selfKraftHeld && p._held) k += pw.selfKraftHeld; // B: nur wenn der Truck die Stellung gehalten hat
+    }
+    return k;
+  }
+
   // Weltkraft ausloesen, wenn Welt w den Ausloeser trigger nutzt.
   _power(pl, w, trigger, ev) {
+    if ((this.round || 0) < (this.opts.powerStartRound ?? 2)) return;   // Weltkraefte erst ab Runde 2 (Fairness: kein Runde-1-Snowball)
     const pw = this.powers[w];
     if (!pw || pw.on !== trigger) return;
+    const o = this.opp(pl.idx);
+    if (pw.onlyIfFoeStands && !o.slot) return;                 // Blockade wirkt nur im aktiven Patt (nicht gegen bereits leeres Brett)
+    if (pw.everyOther) { pl._ptick = (pl._ptick || 0) + 1; if (pl._ptick % 2 === 0) return; }  // nur jede 2. Ausloesung
     let acted = false;
     if (pw.gain) { for (let k = 0; k < (pw.amt || 1); k++) this.gain(pl, pw.gain); acted = true; }
-    if (pw.foeFuel) { const o = this.opp(pl.idx); o.fuel = Math.max(0, o.fuel - pw.foeFuel); acted = true; }   // Gegner bremsen (Kanister)
-    if (pw.foeBat) { const o = this.opp(pl.idx); o.bat = Math.max(0, o.bat - pw.foeBat); acted = true; }        // Gegner bremsen (Batterie)
-    if (pw.clearFoe) { const o = this.opp(pl.idx); if (o.slot) { o.garage.push(o.slot); o.slot = null; o.slotTurbo = false; acted = true; } }  // Spur leeren
+    if (pw.foeFuel) { o.fuel = Math.max(0, o.fuel - pw.foeFuel); acted = true; }   // Gegner bremsen (Kanister)
+    if (pw.foeBat) { o.bat = Math.max(0, o.bat - pw.foeBat); acted = true; }        // Gegner bremsen (Batterie)
+    if (pw.clearFoe) { if (o.slot) { o.garage.push(o.slot); o.slot = null; o.slotTurbo = false; acted = true; } }  // Spur leeren
     if (acted) ev && ev.push({ t: "power", i: pl.idx, world: w });
   }
 
@@ -317,7 +343,8 @@ export class Game {
     const LEICHT = !STARK && !MITTEL;
     const blunder = LEICHT ? 0.42 : (MITTEL ? 0.15 : 0.02);
     const behind = p.crystals <= o.crystals;
-    const gk = o.slot ? o.slot.kraft : null;               // stehende Gegnermaschine (Turbo ist nach dem Kampf verbraucht)
+    const gk = o.slot ? o.slot.kraft + this._wbuff(o.slot.world) : null;  // stehende Gegnermaschine inkl. Weltkraft-Bonus (Turbo ist nach dem Kampf verbraucht)
+    const eff = c => c.kraft + this._wbuff(c.world);        // effektive Kampfkraft der eigenen Baukarte (mit Weltkraft-Bonus)
     const bigInHand = p.hand.filter(c => c.kraft >= 5);
     const build = (c, turbo) => ({ type: "build", uid: c.uid, turbo: !!(turbo && p.bat > 0) });
     const biggest = arr => arr.slice().sort((x, y) => y.kraft - x.kraft || x.cost - y.cost)[0];
@@ -337,15 +364,15 @@ export class Game {
 
     // --- Gegner steht: erobern / abschleppen / gleichziehen (gegnerischen Punkt verhindern!) ---
     if (gk !== null) {
-      const beat = affordable.filter(c => c.kraft > gk).sort((x, y) => x.cost - y.cost || x.kraft - y.kraft)[0];
+      const beat = affordable.filter(c => eff(c) > gk).sort((x, y) => x.cost - y.cost || x.kraft - y.kraft)[0];
       if (beat) return build(beat, false);                                             // billigste ausreichende Maschine
       if (p.bat > 0) {                                                                  // Wand mit Batterie brechen
-        const tb = affordable.filter(c => c.kraft + 2 > gk).sort((x, y) => x.cost - y.cost || y.kraft - x.kraft)[0];
+        const tb = affordable.filter(c => eff(c) + 2 > gk).sort((x, y) => x.cost - y.cost || y.kraft - x.kraft)[0];
         const useBat = STARK || (MITTEL && (behind || gk >= 5));
         if (tb && useBat) return build(tb, true);
       }
       if (towAct && (STARK || MITTEL || gk >= 4)) return towAct;                        // Abschlepper raeumt die Wand ab
-      const tie = affordable.filter(c => c.kraft === gk).sort((x, y) => x.cost - y.cost)[0];
+      const tie = affordable.filter(c => eff(c) === gk).sort((x, y) => x.cost - y.cost)[0];
       if (tie) return build(tie, false);                                               // gleichziehen -> beide in Garage, verhindert Score
       // wirklich nicht kontaktierbar -> unten Ressourcen sammeln (Gegner punktet leider)
     } else {
