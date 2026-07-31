@@ -325,12 +325,41 @@ const Ach = (() => {
     },
   };
 })();
+// Erfolgs-Medaillen als echte Vektor-Grafik (SVG) — pro Erfolg eigene Farbe + Symbol, gesperrt = graue Medaille mit Schloss.
+const ACH_ART = {
+  first:    { core: ["#ffe680", "#f5a81c"], glyph: '<path d="M35 30h30v7c0 12-7 18-15 18s-15-6-15-18z" fill="#fff"/><path d="M35 33c-8 0-11 4-11 9s4 8 10 8" fill="none" stroke="#fff" stroke-width="3.5"/><path d="M65 33c8 0 11 4 11 9s-4 8-10 8" fill="none" stroke="#fff" stroke-width="3.5"/><rect x="46" y="54" width="8" height="9" fill="#fff"/><rect x="37" y="62" width="26" height="6" rx="3" fill="#fff"/>' },
+  streak3:  { core: ["#ffd27a", "#ef6c1a"], glyph: '<path d="M50 26c9 10 7 17 4 22 5-1 6-7 5-11 5 6 6 14 1 21-4 6-10 8-10 8s-16-3-16-19c0-8 6-13 6-13 0 5 3 7 5 6 3-2 3-9-1-15 2 0 5 3 6 8 2-4 0-9-1-13z" fill="#fff"/>' },
+  streak5:  { core: ["#ff9d5c", "#d63a1e"], glyph: '<g fill="#fff"><path d="M50 24c7 9 5 15 3 19 5-2 6-7 5-11 5 6 5 14 0 20 6-2 8-9 8-9 3 5 3 12-2 17-4 5-17 8-17 8s-15-4-15-18c0-7 5-11 5-11 0 4 3 5 4 4 2-2 2-8-1-13 2 0 4 2 5 6 2-3 1-8-2-12 3 0 6 3 7 6 1-3 0-8-3-10z"/></g>' },
+  comeback: { core: ["#a6e88a", "#2f9e46"], glyph: '<path d="M50 26l19 21H57v17H43V47H31z" fill="#fff"/>' },
+  shutout:  { core: ["#8fe3e0", "#1f8f9c"], glyph: '<path d="M50 26l18 7v15c0 15-18 24-18 24s-18-9-18-24V33z" fill="#fff"/><path d="M42 47l6 6 12-13" fill="none" stroke="#1f8f9c" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>' },
+  fast:     { core: ["#9cc3ff", "#3667d6"], glyph: '<path d="M50 24c9 7 12 18 12 27l-4 8H42l-4-8c0-9 3-20 12-27z" fill="#fff"/><circle cx="50" cy="42" r="5" fill="#3667d6"/><path d="M40 60l-6 12 10-5zM60 60l6 12-10-5z" fill="#fff"/>' },
+  boss:     { core: ["#d8a6ff", "#7b3fd6"], glyph: '<path d="M30 42l7 8 6-16 7 14 7-14 6 16 7-8-4 22H34z" fill="#fff"/><rect x="34" y="62" width="32" height="7" rx="2" fill="#fff"/>' },
+  worlds:   { core: ["#a9b6ff", "#4b52c8"], glyph: '<circle cx="50" cy="47" r="15" fill="#fff"/><ellipse cx="50" cy="47" rx="24" ry="8" fill="none" stroke="#fff" stroke-width="3.5" transform="rotate(-20 50 47)"/><path d="M40 44c4 3 16 3 20 0M42 52c4-2 12-2 16 0" stroke="#4b52c8" stroke-width="2.5" fill="none"/>' },
+  veteran:  { core: ["#ffd9a0", "#c8822e"], glyph: '<path d="M50 26l6 15 16 1-12 10 4 16-14-9-14 9 4-16-12-10 16-1z" fill="#fff"/>' },
+};
+function achSVG(id, on) {
+  const a = ACH_ART[id] || { core: ["#ccc", "#999"], glyph: "" };
+  const uid = id + (on ? "1" : "0");
+  const ring = on ? ["#fff4c4", "#e7a11a"] : ["#9aa3b8", "#5c6478"];
+  const core = on ? a.core : ["#7c8398", "#565d70"];
+  const inner = on ? a.glyph
+    : '<rect x="37" y="47" width="26" height="19" rx="4" fill="#cdd5e8"/><path d="M42 47v-6a8 8 0 0 1 16 0v6" fill="none" stroke="#cdd5e8" stroke-width="4.5"/><circle cx="50" cy="55" r="3" fill="#4a5570"/><rect x="48.5" y="55" width="3" height="6" rx="1.5" fill="#4a5570"/>';
+  const sparks = on ? '<g fill="#fff"><path d="M80 22l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/><path d="M22 64l1.5 4 4 1.5-4 1.5-1.5 4-1.5-4-4-1.5 4-1.5z"/></g>' : '';
+  return `<svg viewBox="0 0 100 100" class="achmedal${on ? " on" : ""}" aria-hidden="true">`
+    + `<defs><radialGradient id="c${uid}" cx="38%" cy="30%" r="80%"><stop offset="0" stop-color="${core[0]}"/><stop offset="1" stop-color="${core[1]}"/></radialGradient>`
+    + `<linearGradient id="r${uid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${ring[0]}"/><stop offset="1" stop-color="${ring[1]}"/></linearGradient></defs>`
+    + `<circle cx="50" cy="50" r="47" fill="url(#r${uid})"/><circle cx="50" cy="50" r="47" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="1.5"/>`
+    + `<circle cx="50" cy="50" r="34" fill="url(#c${uid})"/><circle cx="50" cy="50" r="34" fill="none" stroke="rgba(0,0,0,.22)" stroke-width="1.5"/>`
+    + inner
+    + `<ellipse cx="42" cy="33" rx="19" ry="11" fill="rgba(255,255,255,.25)"/>`
+    + sparks + `</svg>`;
+}
 // Erfolge-Uebersicht (Sticker-Sammlung): alle Erfolge, freigeschaltet farbig, sonst als Schloss.
 function showAchievements() {
   const s = Ach.state(), u = s.unlocked || {};
   const cells = Ach.all().map(a => {
     const on = !!u[a.id];
-    return `<div class="achcell${on ? " on" : ""}"><div class="achbig">${on ? a.emoji : "🔒"}</div>`
+    return `<div class="achcell${on ? " on" : ""}"><div class="achbig">${achSVG(a.id, on)}</div>`
       + `<b>${a.name}</b><span>${a.desc}</span></div>`;
   }).join("");
   showOverlay(`<div class="achscreen"><h2>🏅 Erfolge <small>${Ach.count()}/${Ach.all().length}</small></h2>`
@@ -974,8 +1003,12 @@ async function revealAndResolve() {
     const p = game.players[i], a = p.pending || { type: "pass" };
     if (a.type === "build") return { card: game.handCard(p, a.uid), turbo: a.turbo && p.bat > 0 };
     if (p.slot) return { card: p.slot, turbo: p.slotTurbo };
-    if (a.type === "tow") return { card: game.handCard(p, a.uid), special: "🚛", label: "🚛 Abschlepper" };
-    if (a.type === "booster") return { card: game.handCard(p, a.uid), special: "🛢", label: "🛢 Booster" };
+    if (a.type === "tow") {
+      // +1-Modus: das GEWÄHLTE Item (Kanister/Batterie) leuchtend zeigen — kein Emoji. Abschlepp-Modus: kein Badge (Effekt ist animiert).
+      if (a.mode === "plus") return { card: game.handCard(p, a.uid), itemImg: a.plusType === "bat" ? "assets/batterie.png" : "assets/kanister.png", label: "Nachschub" };
+      return { card: game.handCard(p, a.uid), label: "Abschlepper" };
+    }
+    if (a.type === "booster") return { card: game.handCard(p, a.uid), label: "Booster" };   // kein Emoji nötig
     if (a.type === "repair") return { label: "🔧 Reparieren" };
     return { label: "💤 Sparen" };
   };
@@ -1080,7 +1113,7 @@ function showSlotReveal(el, d) {
     if (d.card) {
       const c = cardEl(d.card); c.classList.add("reveal"); if (flip) c.classList.add("flipin");
       if (d.turbo) { const t = document.createElement("div"); t.className = "turbobadge"; t.textContent = "+2"; c.appendChild(t); }
-      if (d.special) { const s = document.createElement("div"); s.className = "specialbadge"; s.textContent = d.special; c.appendChild(s); }
+      if (d.itemImg) { const s = document.createElement("div"); s.className = "itembadge"; s.style.backgroundImage = `url("${d.itemImg}")`; c.appendChild(s); }
       el.appendChild(c);
       const r = el.getBoundingClientRect(); FX.ring(r.left + r.width / 2, r.top + r.height / 2, "150,190,255", 16);
     } else {
@@ -1154,7 +1187,7 @@ function winScreen() {
     humanWon ? Snd.win() : Snd.lose();
     const unlockMsg = unlocked ? `<div class="unlockbanner">🎉 ${MOD_LABEL[unlocked]} freigeschaltet!</div>` : "";
     const achMsg = freshAch.length ? `<div class="achunlocks"><div class="achunlead">Neuer Erfolg!</div>`
-      + freshAch.map(a => `<div class="achpop"><span class="achpe">${a.emoji}</span><span class="acht"><b>${a.name}</b>${a.desc}</span></div>`).join("")
+      + freshAch.map(a => `<div class="achpop"><span class="achpe">${achSVG(a.id, true)}</span><span class="acht"><b>${a.name}</b>${a.desc}</span></div>`).join("")
       + `</div>` : "";
     showOverlay(`<div class="winbanner">🏆 ${w.name} ${w.name === "Du" ? "gewinnst" : "gewinnt"}!</div>
       <div class="wingems">${"◆".repeat(w.crystals)}</div>
