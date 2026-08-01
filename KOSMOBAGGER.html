@@ -2696,7 +2696,7 @@ function markSlot(sel, cls) { const c = $(sel).querySelector(".card"); if (c) c.
 
 // Vollbild-Videosequenz (Intro/Sieg/Niederlage). Stumm-Autoplay + Tippen fuer Ton + Weiter.
 // Fehlt die Datei, geht es sofort weiter (onDone) -> App laeuft auch ohne Videos.
-function playFullscreenVideo(src, onDone) {
+function playFullscreenVideo(src, onDone, poster) {
   let called = false; const go = () => { if (called) return; called = true; try { onDone(); } catch (e) {} };
   if (!fxOn()) return go();
   const sp = document.createElement("div"); sp.className = "fsvideo";
@@ -2704,6 +2704,7 @@ function playFullscreenVideo(src, onDone) {
   // Sieg/Niederlage laufen NACH Nutzer-Interaktion -> Ton-Autoplay ist erlaubt. Erst MIT Ton
   // versuchen; falls der Browser blockt, stumm weiterlaufen und "Antippen fuer Ton" zeigen.
   v.src = src; v.autoplay = true; v.muted = false; v.playsInline = true; v.preload = "auto";
+  if (poster) v.poster = poster;                 // Startbild statt Schwarzbild vor dem Abspielen
   if (v.setAttribute) { v.setAttribute("playsinline", ""); v.setAttribute("webkit-playsinline", ""); }
   const skip = document.createElement("button"); skip.className = "fsskip"; skip.textContent = "Weiter ▸";
   const snd = document.createElement("div"); snd.className = "fssound"; snd.textContent = "🔊 Antippen für Ton";
@@ -2904,7 +2905,7 @@ const TUT = {
 };
 if ($("#learnBtn")) $("#learnBtn").addEventListener("click", () => { Snd.resume(); Snd.click(); TUT.start(); });
 // Erklaervideo als Vollbild abspielen (danach zurueck ins Menue).
-if ($("#videoBtn")) $("#videoBtn").addEventListener("click", () => { Snd.resume(); Snd.click(); playFullscreenVideo("assets/erklaervideo.mp4", () => {}); });
+if ($("#videoBtn")) $("#videoBtn").addEventListener("click", () => { Snd.resume(); Snd.click(); playFullscreenVideo("assets/erklaervideo.mp4", () => {}, "assets/erklaervideo_poster.jpg"); });
 // Erfolge-Sammlung anzeigen.
 if ($("#achBtn")) $("#achBtn").addEventListener("click", () => { Snd.resume(); Snd.click(); showAchievements(); });
 // Beim allerersten Start das Tutorial anbieten (sobald das Menue sichtbar ist).
