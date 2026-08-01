@@ -1249,7 +1249,8 @@ const TUT = {
       { img: "assets/hero.png", t: "Zwei Maschinen treten gegeneinander an. 🤖🚚" },
       { img: "assets/kanister.png", t: "Jede Runde bekommst du einen Kanister ⛽ — damit baust du Maschinen." },
       { img: "assets/kristall.png", t: "Beim Aufdecken gewinnt die <b>größere Zahl</b>." },
-      { img: "assets/kristall.png", t: "Die Siegermaschine <b>bleibt stehen</b> und fördert einen Kristall ⬦." },
+      { img: "assets/kristall.png", t: "Die Siegermaschine <b>bleibt stehen</b> und kämpft weiter." },
+      { img: "assets/kristall.png", t: "Steht sie allein da (der Gegner hat keine), kommt sie <b>durch</b> und holt einen Kristall ⬦." },
       { img: "assets/kristall.png", t: "Wer zuerst genug Kristalle hat, <b>gewinnt</b>! 🏆" },
     ];
     let i = 0;

@@ -215,9 +215,6 @@ export class Game {
       }
     });
 
-    // "Held": Maschine stand schon VOR dieser Runde (nicht frisch gebaut) -> fuer Stellungs-Boni (selfKraftHeld).
-    this.players.forEach((p, i) => { p._held = !!(pre[i] && p.slot === pre[i]); });
-
     // 3) Kampf
     const a = this.players[0], b = this.players[1];
     const ea = this._kraft(a);
@@ -260,7 +257,12 @@ export class Game {
     for (const p of this.players) { p.income = null; p.pending = null; }
     const win = this.players.find(p => p.crystals >= this.opts.target);
     if (win) { this.winner = win.idx; this.phase = "gameover"; ev.push({ t: "win", i: win.idx }); }
-    else this.beginRound();
+    else if ((this.round || 0) >= (this.opts.hardCap ?? 80)) {
+      // Sicherheitsventil: extrem seltene Dauer-Pattsituation (perfekter KI-Spiegel, niemand steht je allein) ->
+      // nach Kristallen entscheiden statt endlos weiterlaufen. Normale Spiele enden ~10-25 Runden, greift also nie.
+      this.winner = this.players[0].crystals >= this.players[1].crystals ? 0 : 1;
+      this.phase = "gameover"; ev.push({ t: "win", i: this.winner });
+    } else this.beginRound();
 
     this.lastEvents = ev;
     return ev;
@@ -284,8 +286,7 @@ export class Game {
     let k = p.slot.kraft + (p.slotTurbo ? 2 : 0);
     if (this.opts.worldPowers && (this.round || 0) >= (this.opts.powerStartRound ?? 2)) {
       const pw = this.powers[p.slot.world];
-      if (pw && pw.selfKraft) k += pw.selfKraft;                    // A: immer im Kampf (auch Baurunde)
-      if (pw && pw.selfKraftHeld && p._held) k += pw.selfKraftHeld; // B: nur wenn der Truck die Stellung gehalten hat
+      if (pw && pw.selfKraft) k += pw.selfKraft;                    // z. B. Vollgas (TRUCKS): +1 im Kampf, solange der Truck steht
     }
     return k;
   }
@@ -296,8 +297,6 @@ export class Game {
     const pw = this.powers[w];
     if (!pw || pw.on !== trigger) return;
     const o = this.opp(pl.idx);
-    if (pw.onlyIfFoeStands && !o.slot) return;                 // Blockade wirkt nur im aktiven Patt (nicht gegen bereits leeres Brett)
-    if (pw.everyOther) { pl._ptick = (pl._ptick || 0) + 1; if (pl._ptick % 2 === 0) return; }  // nur jede 2. Ausloesung
     let acted = false;
     if (pw.gain) { for (let k = 0; k < (pw.amt || 1); k++) this.gain(pl, pw.gain); acted = true; }
     if (pw.foeFuel) { o.fuel = Math.max(0, o.fuel - pw.foeFuel); acted = true; }   // Gegner bremsen (Kanister)
