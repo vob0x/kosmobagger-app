@@ -815,6 +815,63 @@ body.playing #introwrap{opacity:0}
   background:rgba(16,22,44,.72); border:1px solid rgba(255,233,194,.24); border-radius:12px;
   padding:6px 14px; max-width:540px; box-shadow:0 4px 12px rgba(0,0,0,.35); }
 
+/* ============================================================
+   START-SCREEN v2 — kein Scrollen, Hoch- UND Querformat.
+   Hochformat: Hero-Cover-Streifen + Titel, Optionen im 2-Spalten-Raster,
+   Sekundaeraktionen als Icon-Reihe. Querformat (kurze Hoehe): zweispaltig
+   (Marke+Aktionen links, Optionen rechts) -> nutzt die Breite statt Hoehe.
+   Alles per clamp() an die Viewport-Hoehe gekoppelt.
+   ============================================================ */
+#menu{ align-items:center; overflow:hidden; }
+.menu-box{
+  --pad:clamp(14px,2.6vh,26px);
+  width:min(560px,94vw); padding:var(--pad);
+  max-height:calc(100dvh - 2*max(8px,env(safe-area-inset-top)));
+  overflow:hidden; text-align:center;
+}
+#menuHero{ height:clamp(66px,12vh,120px);
+  margin:calc(-1*var(--pad)) calc(-1*var(--pad)) clamp(6px,1.2vh,14px);
+  border-radius:27px 27px 0 0;
+  background-position:center 42%;
+  box-shadow:inset 0 -26px 30px -20px rgba(16,22,44,.8), 0 0 0 1px rgba(120,150,220,.22); }
+#menuLogo{ display:none; }                     /* Hochformat: Hero + Titel genuegen */
+.brand h1{ font-size:clamp(26px,5.2vh,44px); margin:0; }
+.brand .sub{ margin:1px 0 0; font-size:clamp(12px,1.7vh,15px); }
+
+.opts{ display:grid; grid-template-columns:1fr 1fr; gap:clamp(6px,1.3vh,12px);
+  text-align:left; margin-top:clamp(8px,1.6vh,16px); }
+.opts .opt{ margin:0; min-width:0; }
+#opt-ai, #opt-mod{ grid-column:1 / -1; }        /* Staerke + Module volle Breite */
+.opts .opt>label{ margin-bottom:clamp(2px,.6vh,6px); font-size:clamp(10.5px,1.4vh,13px); }
+.opts .seg{ gap:clamp(5px,1vh,10px); }
+.opts .seg button{ min-width:0; padding:clamp(7px,1.5vh,12px) 8px; font-size:clamp(11.5px,1.6vh,14px); }
+
+#startBtn.big{ margin-top:clamp(10px,1.8vh,18px); padding:clamp(11px,2vh,15px); font-size:clamp(15px,2.2vh,18px); }
+.subbtns{ display:flex; gap:clamp(6px,1.2vh,10px); margin-top:clamp(6px,1.2vh,10px); }
+.subbtns .big{ margin-top:0; flex:1; padding:clamp(8px,1.5vh,12px) 6px; font-size:clamp(11px,1.5vh,13.5px); }
+.hint{ margin-top:clamp(6px,1.2vh,12px); font-size:clamp(10px,1.4vh,12.5px); line-height:1.4; }
+@media (max-height:640px){ .hint{ display:none; } }
+@media (max-height:520px){ .brand .sub{ display:none; } }
+
+/* ---- QUERFORMAT bei knapper Hoehe: zweispaltig, nutzt die Breite ---- */
+@media (orientation:landscape) and (max-height:640px){
+  .menu-box{
+    width:min(920px,96vw);
+    display:grid; column-gap:clamp(16px,3vw,34px); row-gap:clamp(4px,1.2vh,12px);
+    grid-template-columns:1fr 1.05fr;
+    grid-template-areas:"hero hero" "brand opts" "actions opts";
+    align-content:center;
+  }
+  #menuHero{ grid-area:hero; height:clamp(44px,15vh,80px); margin:calc(-1*var(--pad)) calc(-1*var(--pad)) clamp(2px,1vh,10px); }
+  .brand{ grid-area:brand; align-self:end; }
+  #menuLogo{ display:block; width:clamp(38px,13vh,58px); height:auto; margin:0 auto 4px; }
+  .brand h1{ font-size:clamp(22px,6.5vh,40px); }
+  .opts{ grid-area:opts; align-content:center; margin-top:0; }
+  .actions{ grid-area:actions; align-self:start; }
+  #startBtn.big{ margin-top:clamp(4px,1.2vh,12px); }
+  .hint{ display:none; }
+}
+
 </style>
 </head>
 <body>
@@ -822,48 +879,56 @@ body.playing #introwrap{opacity:0}
   <!-- Startmenue -->
   <section id="menu" class="screen">
     <div class="menu-box">
-      <h1>KOSMOBAGGER</h1>
-      <p class="sub">Das Duell — lokal spielbar</p>
+      <div class="brand">
+        <h1>KOSMOBAGGER</h1>
+        <p class="sub">Das Duell — lokal spielbar</p>
+      </div>
 
-      <div class="opt">
-        <label>Gegner</label>
-        <div class="seg" data-opt="mode">
-          <button data-val="ai" class="on">Gegen Computer</button>
-          <button data-val="hot">2 Spieler (Hotseat)</button>
+      <div class="opts">
+        <div class="opt">
+          <label>Gegner</label>
+          <div class="seg" data-opt="mode">
+            <button data-val="ai" class="on">Gegen Computer</button>
+            <button data-val="hot">2 Spieler</button>
+          </div>
+        </div>
+
+        <div class="opt">
+          <label>Kristalle zum Sieg</label>
+          <div class="seg" data-opt="target">
+            <button data-val="3">3 (kurz)</button>
+            <button data-val="5" class="on">5 (normal)</button>
+          </div>
+        </div>
+
+        <div class="opt" id="opt-ai">
+          <label>Stärke des Computers</label>
+          <div class="seg" data-opt="ai">
+            <button data-val="0.6">Leicht</button>
+            <button data-val="0.85" class="on">Mittel</button>
+            <button data-val="0.97">Stark</button>
+          </div>
+        </div>
+
+        <div class="opt" id="opt-mod">
+          <label>Module</label>
+          <div class="seg segwrap" data-opt="modules">
+            <button data-val="1">Modul 1 (Treibstoff)</button>
+            <button data-val="2" class="on">Modul 2 (+ Batterien)</button>
+            <button data-val="3">Modul 3 (+ Weltkräfte)</button>
+          </div>
         </div>
       </div>
 
-      <div class="opt">
-        <label>Module</label>
-        <div class="seg segwrap" data-opt="modules">
-          <button data-val="1">Modul 1 (Treibstoff)</button>
-          <button data-val="2" class="on">Modul 2 (+ Batterien)</button>
-          <button data-val="3">Modul 3 (+ Weltkräfte)</button>
+      <div class="actions">
+        <button id="startBtn" class="big">Spiel starten</button>
+        <div class="subbtns">
+          <button id="learnBtn" class="big ghostbtn">🎓 Lernen</button>
+          <button id="videoBtn" class="big ghostbtn">🎬 Erklärfilm</button>
+          <button id="achBtn" class="big ghostbtn">🏅 Erfolge</button>
         </div>
       </div>
-
-      <div class="opt">
-        <label>Kristalle zum Sieg</label>
-        <div class="seg" data-opt="target">
-          <button data-val="3">3 (kurz)</button>
-          <button data-val="5" class="on">5 (normal)</button>
-        </div>
-      </div>
-
-      <div class="opt" id="opt-ai">
-        <label>Stärke des Computers</label>
-        <div class="seg" data-opt="ai">
-          <button data-val="0.6">Leicht</button>
-          <button data-val="0.85" class="on">Mittel</button>
-          <button data-val="0.97">Stark</button>
-        </div>
-      </div>
-
-      <button id="startBtn" class="big">Spiel starten</button>
-      <button id="learnBtn" class="big ghostbtn">🎓 Lernen (Tutorial)</button>
-      <button id="videoBtn" class="big ghostbtn">🎬 Erklärvideo ansehen</button>
-      <button id="achBtn" class="big ghostbtn">🏅 Erfolge</button>
-      <p class="hint">Grosse Maschine bleibt stehen und kämpft jede Runde weiter — aber sie zu bauen kostet Sparen. Wer zuerst genug Kristalle sammelt, gewinnt.</p>
+      <p class="hint">Grosse Maschine bleibt stehen und kämpft weiter — wer zuerst genug Kristalle sammelt, gewinnt.</p>
     </div>
   </section>
 
@@ -1979,7 +2044,7 @@ FX.start();   // Sternenfeld auch hinter dem Menue
 // Menue-Logo (Emblem aus den App-Icons)
 (() => {
   const box = document.querySelector(".menu-box"), h1 = box && box.querySelector("h1");
-  if (box && h1 && !$("#menuLogo")) { const im = document.createElement("img"); im.id = "menuLogo"; im.src = "icons/icon-192.png"; im.alt = ""; box.insertBefore(im, h1); }
+  if (box && h1 && !$("#menuLogo")) { const im = document.createElement("img"); im.id = "menuLogo"; im.src = "icons/icon-192.png"; im.alt = ""; h1.parentNode.insertBefore(im, h1); }
 })();
 
 // Optionale custom Grafiken: erscheinen automatisch, sobald die Dateien im assets/ liegen.

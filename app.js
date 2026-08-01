@@ -412,7 +412,7 @@ FX.start();   // Sternenfeld auch hinter dem Menue
 // Menue-Logo (Emblem aus den App-Icons)
 (() => {
   const box = document.querySelector(".menu-box"), h1 = box && box.querySelector("h1");
-  if (box && h1 && !$("#menuLogo")) { const im = document.createElement("img"); im.id = "menuLogo"; im.src = "icons/icon-192.png"; im.alt = ""; box.insertBefore(im, h1); }
+  if (box && h1 && !$("#menuLogo")) { const im = document.createElement("img"); im.id = "menuLogo"; im.src = "icons/icon-192.png"; im.alt = ""; h1.parentNode.insertBefore(im, h1); }
 })();
 
 // Optionale custom Grafiken: erscheinen automatisch, sobald die Dateien im assets/ liegen.

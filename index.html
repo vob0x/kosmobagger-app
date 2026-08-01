@@ -20,48 +20,56 @@
   <!-- Startmenue -->
   <section id="menu" class="screen">
     <div class="menu-box">
-      <h1>KOSMOBAGGER</h1>
-      <p class="sub">Das Duell — lokal spielbar</p>
+      <div class="brand">
+        <h1>KOSMOBAGGER</h1>
+        <p class="sub">Das Duell — lokal spielbar</p>
+      </div>
 
-      <div class="opt">
-        <label>Gegner</label>
-        <div class="seg" data-opt="mode">
-          <button data-val="ai" class="on">Gegen Computer</button>
-          <button data-val="hot">2 Spieler (Hotseat)</button>
+      <div class="opts">
+        <div class="opt">
+          <label>Gegner</label>
+          <div class="seg" data-opt="mode">
+            <button data-val="ai" class="on">Gegen Computer</button>
+            <button data-val="hot">2 Spieler</button>
+          </div>
+        </div>
+
+        <div class="opt">
+          <label>Kristalle zum Sieg</label>
+          <div class="seg" data-opt="target">
+            <button data-val="3">3 (kurz)</button>
+            <button data-val="5" class="on">5 (normal)</button>
+          </div>
+        </div>
+
+        <div class="opt" id="opt-ai">
+          <label>Stärke des Computers</label>
+          <div class="seg" data-opt="ai">
+            <button data-val="0.6">Leicht</button>
+            <button data-val="0.85" class="on">Mittel</button>
+            <button data-val="0.97">Stark</button>
+          </div>
+        </div>
+
+        <div class="opt" id="opt-mod">
+          <label>Module</label>
+          <div class="seg segwrap" data-opt="modules">
+            <button data-val="1">Modul 1 (Treibstoff)</button>
+            <button data-val="2" class="on">Modul 2 (+ Batterien)</button>
+            <button data-val="3">Modul 3 (+ Weltkräfte)</button>
+          </div>
         </div>
       </div>
 
-      <div class="opt">
-        <label>Module</label>
-        <div class="seg segwrap" data-opt="modules">
-          <button data-val="1">Modul 1 (Treibstoff)</button>
-          <button data-val="2" class="on">Modul 2 (+ Batterien)</button>
-          <button data-val="3">Modul 3 (+ Weltkräfte)</button>
+      <div class="actions">
+        <button id="startBtn" class="big">Spiel starten</button>
+        <div class="subbtns">
+          <button id="learnBtn" class="big ghostbtn">🎓 Lernen</button>
+          <button id="videoBtn" class="big ghostbtn">🎬 Erklärfilm</button>
+          <button id="achBtn" class="big ghostbtn">🏅 Erfolge</button>
         </div>
       </div>
-
-      <div class="opt">
-        <label>Kristalle zum Sieg</label>
-        <div class="seg" data-opt="target">
-          <button data-val="3">3 (kurz)</button>
-          <button data-val="5" class="on">5 (normal)</button>
-        </div>
-      </div>
-
-      <div class="opt" id="opt-ai">
-        <label>Stärke des Computers</label>
-        <div class="seg" data-opt="ai">
-          <button data-val="0.6">Leicht</button>
-          <button data-val="0.85" class="on">Mittel</button>
-          <button data-val="0.97">Stark</button>
-        </div>
-      </div>
-
-      <button id="startBtn" class="big">Spiel starten</button>
-      <button id="learnBtn" class="big ghostbtn">🎓 Lernen (Tutorial)</button>
-      <button id="videoBtn" class="big ghostbtn">🎬 Erklärvideo ansehen</button>
-      <button id="achBtn" class="big ghostbtn">🏅 Erfolge</button>
-      <p class="hint">Grosse Maschine bleibt stehen und kämpft jede Runde weiter — aber sie zu bauen kostet Sparen. Wer zuerst genug Kristalle sammelt, gewinnt.</p>
+      <p class="hint">Grosse Maschine bleibt stehen und kämpft weiter — wer zuerst genug Kristalle sammelt, gewinnt.</p>
     </div>
   </section>
 
