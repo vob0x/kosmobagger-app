@@ -699,8 +699,8 @@ function slotShow(el, card, turbo) {
   if (card) {
     const c = cardEl(card); c.classList.add("idle");
     if (turbo) { const t = document.createElement("div"); t.className = "turbobadge"; t.textContent = "+2"; c.appendChild(t); }
-    // Weltkraft-Kampfbonus (z. B. Vollgas: Truck +1) sichtbar am stehenden Maschinen-Slot, sobald aktiv (ab Runde 2).
-    if (card.kraft && game && game.opts.worldPowers && (game.round || 0) >= (game.opts.powerStartRound ?? 2)) {
+    // Weltkraft-Kampfbonus (Vollgas: Truck +1) sichtbar am stehenden Slot — ab Runde 1 (Ausnahme vom Runde-2-Gate).
+    if (card.kraft && game && game.opts.worldPowers) {
       const pw = WORLD_POWERS[card.world];
       if (pw && pw.selfKraft) { const b = document.createElement("div"); b.className = "buffbadge"; b.textContent = "+" + pw.selfKraft; b.title = pw.label; c.appendChild(b); }
     }
@@ -1251,6 +1251,9 @@ const TUT = {
       { img: "assets/kristall.png", t: "Beim Aufdecken gewinnt die <b>größere Zahl</b>." },
       { img: "assets/kristall.png", t: "Die Siegermaschine <b>bleibt stehen</b> und kämpft weiter." },
       { img: "assets/kristall.png", t: "Steht sie allein da (der Gegner hat keine), kommt sie <b>durch</b> und holt einen Kristall ⬦." },
+      { img: "cards/TRK-5_Monster-Truck.png", t: "Extra – <b>Weltkräfte</b>: Du wählst 2 von 4 Welten, jede mit eigener Kraft." },
+      { img: "cards/BAU-5_Turbo-Bagger.png", t: "<b>Bau</b> & <b>Kosmos</b>: der Gegner verliert einen Kanister ⛽ — ab Runde 2." },
+      { img: "cards/TRK-5_Monster-Truck.png", t: "<b>Truck</b>: +1 Kraft, schon ab Runde 1. <b>Technik</b>: bei einem Kampf-Sieg Kanister & Batterie weg." },
       { img: "assets/kristall.png", t: "Wer zuerst genug Kristalle hat, <b>gewinnt</b>! 🏆" },
     ];
     let i = 0;

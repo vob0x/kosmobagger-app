@@ -273,20 +273,21 @@ export class Game {
     else { if (p.fuel < TANK_MAX) p.fuel++; else if (p.bat < BAT_MAX) p.bat++; }
   }
 
-  // Weltkraft-Kampfbonus einer Welt (selfKraft), rundengated. 0 wenn inaktiv. Fuer KI-Bewertung.
+  // Weltkraft-Kampfbonus einer Welt (selfKraft). AUSNAHME vom Runde-2-Gate: wirkt schon ab Runde 1
+  // (reiner Kampf-Bonus, kein Ressourcen-Abzug -> kein Runde-1-Snowball). Fuer KI-Bewertung.
   _wbuff(world) {
-    if (!this.opts.worldPowers || (this.round || 0) < (this.opts.powerStartRound ?? 2)) return 0;
+    if (!this.opts.worldPowers) return 0;
     const pw = this.powers[world];
     return pw && pw.selfKraft ? pw.selfKraft : 0;
   }
 
-  // Effektive Kampfkraft: Basiskraft + Turbo(+2) + optionaler Weltkraft-Bonus (selfKraft, rundengated).
+  // Effektive Kampfkraft: Basiskraft + Turbo(+2) + Weltkraft-Bonus (selfKraft).
   _kraft(p) {
     if (!p.slot) return null;
     let k = p.slot.kraft + (p.slotTurbo ? 2 : 0);
-    if (this.opts.worldPowers && (this.round || 0) >= (this.opts.powerStartRound ?? 2)) {
+    if (this.opts.worldPowers) {
       const pw = this.powers[p.slot.world];
-      if (pw && pw.selfKraft) k += pw.selfKraft;                    // z. B. Vollgas (TRUCKS): +1 im Kampf, solange der Truck steht
+      if (pw && pw.selfKraft) k += pw.selfKraft;   // Vollgas (TRUCKS): +1 im Kampf, ab Runde 1 (Ausnahme vom Gate)
     }
     return k;
   }

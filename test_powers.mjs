@@ -41,8 +41,8 @@ for (const W of ["BAU", "KOSMOS", "TRUCKS", "TECHNIK"]) {
   let g = mk(W);
   let c0 = ensure(g.players[0], 6), c1 = ensure(g.players[1], 1);
   let ev = step(g, build(c0), build(c1));
-  check(!fired(ev), `Runde 1: keine Kraft (Gate). Gefeuert=${fired(ev)}`);
-  if (W === "TRUCKS") { const cl = clash(ev); check(cl && cl.ea === 6, `Runde 1: Vollgas AUS -> ea=${cl && cl.ea} (soll 6)`); }
+  check(!fired(ev), `Runde 1: kein Drain-Trigger (Gate). Gefeuert=${fired(ev)}`);
+  if (W === "TRUCKS") { const cl = clash(ev); check(cl && cl.ea === 7, `Runde 1: Vollgas AN (Ausnahme vom Gate) -> ea=${cl && cl.ea} (soll 7)`); }
 
   // -> Runde 2 (Zustand aus A weiterlaufen lassen; W-Maschine steht, Gegner in Garage)
   // Szenario B: RUNDE 2 – W baut frisch Kraft6 gegen neuen Gegner Kraft1 -> contested WIN.
