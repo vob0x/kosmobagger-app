@@ -509,7 +509,7 @@ const WORLD_META = {
   KOSMOS:  { name: "Kosmos",  img: "cards/KOS-6_Galaxie-Riese.png" },
   BAU:     { name: "Bau",     img: "cards/BAU-6_Riesen-Kran.png" },
   TECHNIK: { name: "Technik", img: "cards/TEC-6_Boss-Roboter.png" },
-  TRUCKS:  { name: "Trucks",  img: "cards/TRK-6_Riesen-Sattelschlepper.png" },
+  TRUCKS:  { name: "Trucks",  img: "cards/TRK-5_Monster-Truck.png" },
 };
 const WORLD_ORDER = ["BAU", "KOSMOS", "TECHNIK", "TRUCKS"];
 
