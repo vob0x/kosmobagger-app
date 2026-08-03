@@ -110,8 +110,11 @@ html,body{overflow-x:hidden;max-width:100%}
 .card.back{background-color:#101a37}
 .card .cost{position:absolute;top:5px;right:5px;display:flex;gap:2px}
 .card .cost i{width:12px;height:12px;border-radius:3px;background:var(--gold);box-shadow:0 0 0 1px #000}
-.card .turbobadge{position:absolute;bottom:5px;left:5px;background:var(--good);color:#06210f;font-weight:800;
-  font-size:11px;padding:1px 6px;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.5)}
+/* Batterie-+2: oben links neben der Kraftzahl (analog zum roten Vollgas-+1). */
+.card .turbobadge{position:absolute;top:2%;left:29%;background:var(--good);color:#06210f;font-weight:900;
+  font-size:12px;line-height:1;padding:2px 5px;border-radius:9px;box-shadow:0 1px 3px rgba(0,0,0,.6);
+  border:1.5px solid #fff;animation:buffpop .3s ease}
+.card .turbobadge.stacked{top:19%}   /* wenn auch das rote +1 da ist: darunter stapeln */
 /* Weltkraft-Kampfbonus (Vollgas: Truck +1) — roter Badge oben rechts am stehenden Slot. */
 /* Rot-Kampfbonus „+1" oben links, direkt neben der ins Artwork gebackenen Kraftzahl (Scheibe oben links). */
 .card .buffbadge{position:absolute;top:2%;left:29%;background:#d33b34;color:#fff;font-weight:900;

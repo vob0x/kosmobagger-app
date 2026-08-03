@@ -202,7 +202,7 @@ export const MACHINES = [
     "id": "TRK-5",
     "world": "TRUCKS",
     "wcode": "TRK",
-    "kraft": 5,
+    "kraft": 6,
     "cost": 3,
     "name": "Monster-Truck",
     "img": "cards/TRK-5_Monster-Truck.png"
@@ -211,7 +211,7 @@ export const MACHINES = [
     "id": "TRK-6",
     "world": "TRUCKS",
     "wcode": "TRK",
-    "kraft": 6,
+    "kraft": 5,
     "cost": 3,
     "name": "Riesen-Sattelschlepper",
     "img": "cards/TRK-6_Riesen-Sattelschlepper.png"

@@ -694,16 +694,28 @@ function slotRenderPre(el, p, hideChoice) {
   slotShow(el, p.slot, p.slotTurbo);
 }
 
+// Kampf-Badges, beide OBEN LINKS neben der Kraftzahl: rotes Vollgas-+1 (Truck, ab Runde 1)
+// und gruener Batterie-+2. Auf JEDER gezeigten Kampfkarte gebraucht: Aufdecken, Kampf, stehend.
+function battleBadges(c, card, turbo) {
+  let buff = false;
+  if (card && card.kraft && game && game.opts.worldPowers) {
+    const pw = WORLD_POWERS[card.world];
+    if (pw && pw.selfKraft) {
+      const b = document.createElement("div"); b.className = "buffbadge";
+      b.textContent = "+" + pw.selfKraft; b.title = pw.label; c.appendChild(b); buff = true;
+    }
+  }
+  if (turbo) {  // Batterie-+2: gleicher Ort wie das rote +1; sind beide da, darunter gestapelt.
+    const t = document.createElement("div"); t.className = "turbobadge" + (buff ? " stacked" : "");
+    t.textContent = "+2"; t.title = "Batterie: +2 in diesem Kampf"; c.appendChild(t);
+  }
+}
+
 function slotShow(el, card, turbo) {
   el.innerHTML = ""; el.classList.toggle("empty", !card);
   if (card) {
     const c = cardEl(card); c.classList.add("idle");
-    if (turbo) { const t = document.createElement("div"); t.className = "turbobadge"; t.textContent = "+2"; c.appendChild(t); }
-    // Weltkraft-Kampfbonus (Vollgas: Truck +1) sichtbar am stehenden Slot — ab Runde 1 (Ausnahme vom Runde-2-Gate).
-    if (card.kraft && game && game.opts.worldPowers) {
-      const pw = WORLD_POWERS[card.world];
-      if (pw && pw.selfKraft) { const b = document.createElement("div"); b.className = "buffbadge"; b.textContent = "+" + pw.selfKraft; b.title = pw.label; c.appendChild(b); }
-    }
+    battleBadges(c, card, turbo);
     el.appendChild(c);
   }
 }
@@ -1112,7 +1124,7 @@ function showSlotReveal(el, d) {
     el.innerHTML = ""; el.classList.remove("empty");
     if (d.card) {
       const c = cardEl(d.card); c.classList.add("reveal"); if (flip) c.classList.add("flipin");
-      if (d.turbo) { const t = document.createElement("div"); t.className = "turbobadge"; t.textContent = "+2"; c.appendChild(t); }
+      battleBadges(c, d.card, d.turbo);   // rotes +1 (ab Runde 1) + Batterie-+2 auch beim Aufdecken/Kampf
       if (d.itemImg) { const s = document.createElement("div"); s.className = "itembadge"; s.style.backgroundImage = `url("${d.itemImg}")`; c.appendChild(s); }
       el.appendChild(c);
       const r = el.getBoundingClientRect(); FX.ring(r.left + r.width / 2, r.top + r.height / 2, "150,190,255", 16);
