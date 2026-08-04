@@ -213,8 +213,8 @@ export const MACHINES = [
     "wcode": "TRK",
     "kraft": 5,
     "cost": 3,
-    "name": "Riesen-Sattelschlepper",
-    "img": "cards/TRK-6_Riesen-Sattelschlepper.png"
+    "name": "Riesen-Schlepper",
+    "img": "cards/TRK-6_Riesen-Schlepper.png"
   }
 ];
 

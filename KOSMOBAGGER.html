@@ -23,7 +23,12 @@
 :root{
   --bg0:#0b1020; --bg1:#141c33; --panel:#1b2440; --line:#2c3960;
   --ink:#eef2ff; --dim:#9fb0d6; --gold:#ffcf3f; --good:#37c86a; --bad:#ff5a5a;
-  --cardw: 128px; --cardh: 179px;
+  /* Kartengroesse STUFENLOS an Fensterhoehe UND -breite gekoppelt -> nie abgeschnitten und
+     kein Springen zwischen Breakpoints (Ursache des "mal gross, mal klein"). 4 Karten passen
+     immer nebeneinander. Fallback 140px, falls dvh/min() nicht unterstuetzt werden. */
+  --cardw: 140px;
+  --cardw: min(176px, calc((100dvh - 230px) / 4.2), calc((100vw - 48px) / 4));
+  --cardh: calc(var(--cardw) * 1.4);
 }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
@@ -82,8 +87,9 @@ html,body{overflow-x:hidden;max-width:100%}
 .side .crystals{gap:2px}
 .side .res{background:none;border:0;padding:0;font-size:12px;gap:2px}
 .side .res b{font-size:12px}
-.side .res .cell,.side .res .cell img{width:15px;height:15px}
-.side .crystals .cell,.side .crystals .cell img{width:14px;height:14px}
+/* Spieler- UND Gegnerleiste identisch gross (beide 18px) — vorher war Spieler kleiner. */
+.side .res .cell,.side .res .cell img{width:18px;height:18px}
+.side .crystals .cell,.side .crystals .cell img{width:18px;height:18px}
 /* Gegnerzeile zusaetzlich rechts freihalten (unter Menue-/Ton-Knopf) */
 #oppArea .pinfo{padding-right:64px}
 .res{background:#0e1730;border:1px solid var(--line);border-radius:20px;padding:3px 12px;display:inline-flex;align-items:center;gap:6px}
@@ -534,7 +540,7 @@ body.playing #introwrap{opacity:0}
 
 /* Grosse Screens (iPad quer & hoch): groessere Karten, mehr Luft, fuellt den Screen */
 @media (min-width:820px){
-  :root{--cardw:154px;--cardh:215px}
+  /* Kartengroesse kommt stufenlos aus :root (min()); hier NICHT mehr ueberschreiben. */
   .side .pname{font-size:15px;max-width:160px}
   .side .res{font-size:14px;gap:3px}
   .side .res .cell,.side .res .cell img{width:20px;height:20px}
@@ -550,7 +556,6 @@ body.playing #introwrap{opacity:0}
   .acthint{font-size:15px}
 }
 @media (min-width:1180px){
-  :root{--cardw:176px;--cardh:246px}
   #centerMsg{font-size:38px}
 }
 
@@ -801,11 +806,8 @@ body.playing #introwrap{opacity:0}
 .side.me{ padding-top:4px; padding-bottom:4px; }
 .handrow{ padding-top:8px; }
 .mehand{ min-height:0; }
-@media (max-height:1024px){ :root{ --cardw:150px; --cardh:210px } }
-@media (max-height:900px){  :root{ --cardw:136px; --cardh:190px } }
-@media (max-height:800px){  :root{ --cardw:122px; --cardh:170px } }
-@media (max-height:700px){  :root{ --cardw:108px; --cardh:150px } }
-@media (max-height:600px){  :root{ --cardw:94px;  --cardh:132px } }
+/* (Kartengroesse jetzt stufenlos oben in :root definiert; fruehere max-height-Stufen entfernt,
+    da genau ihr Umschalten das Springen der Handkarten verursacht hat.) */
 
 /* Einkommens-Wahl: klare Funktions-Labels (Playtester verstand Kanister/Batterie nicht) */
 .incpick-lbl{ align-items:flex-start; gap:22px; }
@@ -1189,8 +1191,8 @@ const MACHINES = [
     "wcode": "TRK",
     "kraft": 5,
     "cost": 3,
-    "name": "Riesen-Sattelschlepper",
-    "img": "cards/TRK-6_Riesen-Sattelschlepper.png"
+    "name": "Riesen-Schlepper",
+    "img": "cards/TRK-6_Riesen-Schlepper.png"
   }
 ];
 

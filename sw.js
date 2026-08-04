@@ -1,6 +1,6 @@
 // KOSMOBAGGER PWA Service-Worker.
 // App-Shell NETWORK-FIRST (online aktuell), Medien CACHE-FIRST (offline). Version bei Release erhoehen.
-const CACHE = "kosmobagger-v61";
+const CACHE = "kosmobagger-v62";
 const ASSETS = [
   "./",
   "index.html",
@@ -36,7 +36,7 @@ const ASSETS = [
   "cards/TRK-3_Tank-Laster.png",
   "cards/TRK-4_Schwerlast-Truck.png",
   "cards/TRK-5_Monster-Truck.png",
-  "cards/TRK-6_Riesen-Sattelschlepper.png",
+  "cards/TRK-6_Riesen-Schlepper.png",
   "icons/apple-touch-icon.png",
   "icons/favicon-64.png",
   "icons/icon-192.png",
