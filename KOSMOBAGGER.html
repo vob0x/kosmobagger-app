@@ -27,10 +27,11 @@
      Spielflaeche/Slots am GROESSTEN -> Handkarten zweitgroesste -> verdeckte Gegnerkarten am kleinsten.
      --sloth ist das Leitmass; Kartenverhaeltnis B:H = 63:88 (~0.716).
      Begrenzt durch Hoehe (2 Slots + Hand + Gegnerhand + Leisten) UND Breite (4 Handkarten). */
-  --sloth: 300px;                                                                /* Fallback ohne min()/dvh */
-  /* Slot (Spielflaeche, GROESSTE): primaer an die Fensterhoehe gekoppelt -> nutzt den Platz aus.
-     Breite ist unkritisch, weil nur EIN Slot mittig steht (kein 4er-Nebeneinander). */
-  --sloth: min(360px, calc((100dvh - 150px) / 3.4));
+  --sloth: 240px;                                                                /* Fallback ohne min()/dvh */
+  /* Slot (Spielflaeche, GROESSTE): an die Fensterhoehe gekoppelt. Der Abzug (225) und der Teiler (3.5)
+     sind AN ECHTEN MESSWERTEN kalibriert (2 Slots + Gegnerhand + Handkarten + Leisten/Labels ~192px Fixkosten),
+     damit die eigene Karte NIE in die Ressourcen-/Handleiste laeuft (Weltzeile bleibt lesbar) -> ~25px Reserve. */
+  --sloth: min(340px, calc((100dvh - 225px) / 3.5));
   --slotw: calc(var(--sloth) * 0.716);
   /* Handkarten (zweitgroesste): 82% der Slot-Hoehe, ABER nie so breit, dass 4 nebeneinander ueberlaufen. */
   --cardh: min(calc(var(--sloth) * 0.82), calc((100vw - 40px) / 4 / 0.716));
