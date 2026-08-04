@@ -7,12 +7,17 @@
 :root{
   --bg0:#0b1020; --bg1:#141c33; --panel:#1b2440; --line:#2c3960;
   --ink:#eef2ff; --dim:#9fb0d6; --gold:#ffcf3f; --good:#37c86a; --bad:#ff5a5a;
-  /* Kartengroesse STUFENLOS an Fensterhoehe UND -breite gekoppelt -> nie abgeschnitten und
-     kein Springen zwischen Breakpoints (Ursache des "mal gross, mal klein"). 4 Karten passen
-     immer nebeneinander. Fallback 140px, falls dvh/min() nicht unterstuetzt werden. */
-  --cardw: 140px;
-  --cardw: min(176px, calc((100dvh - 230px) / 4.2), calc((100vw - 48px) / 4));
-  --cardh: calc(var(--cardw) * 1.4);
+  /* GROESSEN-HIERARCHIE (stufenlos, passt immer, kein Abschneiden, kein Breakpoint-Springen):
+     Spielflaeche/Slots am GROESSTEN -> Handkarten zweitgroesste -> verdeckte Gegnerkarten am kleinsten.
+     --sloth ist das Leitmass; Kartenverhaeltnis B:H = 63:88 (~0.716).
+     Begrenzt durch Hoehe (2 Slots + Hand + Gegnerhand + Leisten) UND Breite (4 Handkarten). */
+  --sloth: 260px;                                                                /* Fallback ohne min()/dvh */
+  --sloth: min(320px, calc((100dvh - 150px) / 3.35), calc((100vw - 26px) / 2.35));
+  --slotw: calc(var(--sloth) * 0.716);
+  --cardh: calc(var(--sloth) * 0.82);            /* Handkarten (zweitgroesste) */
+  --cardw: calc(var(--cardh) * 0.716);
+  --opph:  calc(var(--sloth) * 0.46);            /* verdeckte Gegnerkarten (kleinste) */
+  --oppw:  calc(var(--opph) * 0.716);
 }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
@@ -87,15 +92,15 @@ html,body{overflow-x:hidden;max-width:100%}
 
 .handrow{display:flex;gap:8px;justify-content:center;align-items:flex-end;min-height:calc(var(--cardh) + 8px);
   padding-top:6px;flex-wrap:nowrap}
-.opphand{min-height:70px}
-.opphand .card{width:52px;height:73px;--cardw:52px;--cardh:73px}
+.opphand{min-height:calc(var(--opph) + 6px)}
+.opphand .card{width:var(--oppw);height:var(--opph)}
 
 #battle{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;position:relative;
   background:radial-gradient(600px 300px at 50% 50%, rgba(60,80,150,.18), transparent 70%)}
 .slot-wrap{display:flex;flex-direction:column;align-items:center;gap:4px}
 .slotlabel{font-size:11px;color:#dfeaff;text-transform:uppercase;letter-spacing:1px;text-shadow:0 2px 6px rgba(0,0,0,.85)}
 /* Bauplatz als malerischer Kartenrahmen (statt schlichtem Strich), passt zur Buehne */
-.slot{width:var(--cardw);height:var(--cardh);border-radius:14px;border:2px solid rgba(130,180,255,.42);
+.slot{width:var(--slotw);height:var(--sloth);border-radius:14px;border:2px solid rgba(130,180,255,.42);
   display:flex;align-items:center;justify-content:center;background:rgba(9,16,36,.5);
   box-shadow:inset 0 0 30px rgba(60,120,220,.28),inset 0 1px 0 rgba(255,255,255,.12),0 10px 26px rgba(0,0,0,.5);
   backdrop-filter:blur(2px)}
@@ -213,7 +218,7 @@ body{background:radial-gradient(1200px 820px at 50% -18%, #1b2648 0%, #0b1022 55
 /* Battlefield */
 #battle{background:radial-gradient(720px 380px at 50% 50%,rgba(80,110,205,.15),transparent 72%)}
 .slot{border-radius:14px;border:2px dashed rgba(120,150,220,.35);background:rgba(10,16,34,.32);box-shadow:inset 0 0 34px rgba(60,90,180,.13)}
-.slot .card{box-shadow:0 12px 32px rgba(0,0,0,.62),0 0 0 1px rgba(255,255,255,.05)}
+.slot .card{width:var(--slotw);height:var(--sloth);box-shadow:0 12px 32px rgba(0,0,0,.62),0 0 0 1px rgba(255,255,255,.05)}
 .slotlabel{letter-spacing:2px;opacity:.85}
 #centerMsg{font-size:22px;font-weight:900;letter-spacing:.4px;text-shadow:0 2px 14px rgba(0,0,0,.7),0 0 22px rgba(120,180,255,.28)}
 
@@ -530,7 +535,7 @@ body.playing #introwrap{opacity:0}
   .side .res .cell,.side .res .cell img{width:20px;height:20px}
   .side .crystals .cell,.side .crystals .cell img{width:19px;height:19px}
   #oppArea .pinfo{padding-right:calc(96px + env(safe-area-inset-right))}
-  .opphand .card{width:66px;height:92px;--cardw:66px;--cardh:92px}
+  /* Gegnerhand skaliert jetzt stufenlos ueber --oppw/--opph; kein fixer Wert mehr noetig. */
   #centerMsg{font-size:32px}
   .slotlabel{font-size:15px}
   .pbtn{width:118px;min-height:118px;border-radius:26px}
