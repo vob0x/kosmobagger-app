@@ -11,10 +11,13 @@
      Spielflaeche/Slots am GROESSTEN -> Handkarten zweitgroesste -> verdeckte Gegnerkarten am kleinsten.
      --sloth ist das Leitmass; Kartenverhaeltnis B:H = 63:88 (~0.716).
      Begrenzt durch Hoehe (2 Slots + Hand + Gegnerhand + Leisten) UND Breite (4 Handkarten). */
-  --sloth: 260px;                                                                /* Fallback ohne min()/dvh */
-  --sloth: min(320px, calc((100dvh - 150px) / 3.35), calc((100vw - 26px) / 2.35));
+  --sloth: 300px;                                                                /* Fallback ohne min()/dvh */
+  /* Slot (Spielflaeche, GROESSTE): primaer an die Fensterhoehe gekoppelt -> nutzt den Platz aus.
+     Breite ist unkritisch, weil nur EIN Slot mittig steht (kein 4er-Nebeneinander). */
+  --sloth: min(360px, calc((100dvh - 150px) / 3.4));
   --slotw: calc(var(--sloth) * 0.716);
-  --cardh: calc(var(--sloth) * 0.82);            /* Handkarten (zweitgroesste) */
+  /* Handkarten (zweitgroesste): 82% der Slot-Hoehe, ABER nie so breit, dass 4 nebeneinander ueberlaufen. */
+  --cardh: min(calc(var(--sloth) * 0.82), calc((100vw - 40px) / 4 / 0.716));
   --cardw: calc(var(--cardh) * 0.716);
   --opph:  calc(var(--sloth) * 0.46);            /* verdeckte Gegnerkarten (kleinste) */
   --oppw:  calc(var(--opph) * 0.716);
@@ -183,7 +186,12 @@ canvas.confetti{position:fixed;inset:0;z-index:60;pointer-events:none}
 .card.dragghost{position:fixed;z-index:999;pointer-events:none;transform:translate(-50%,-50%) rotate(-4deg);opacity:.96;box-shadow:0 22px 44px rgba(0,0,0,.6)}
 .slot.drop{border-color:var(--gold);background:rgba(255,207,63,.12);box-shadow:inset 0 0 24px rgba(255,207,63,.45)}
 
-.acthint{flex-basis:100%;order:-1;text-align:center;color:var(--dim);font-size:13px;margin-bottom:2px}
+.acthint{flex-basis:100%;order:-1;text-align:center;color:var(--dim);font-size:13px;margin:0 auto 2px;
+  max-width:min(560px,92vw);line-height:1.15}
+/* Der ausfuehrliche Strategie-Tipp (.acttip) macht die Aktionsleiste hoch. Auf schmalen/niedrigen
+   Displays waechst sie dadurch nach oben in die Rundenmeldung ("Runde 1 ...") -> Ueberlappung.
+   Dort blenden wir NUR den Tipp aus; der kurze Handlungshinweis bleibt. Auf Tablets/Desktop bleibt alles. */
+@media (max-width:600px),(max-height:820px){ .acttip{display:none} }
 
 /* Karte faellt beim Aufdecken in den Slot */
 .slot .card.reveal{animation:dropflip .5s ease}

@@ -146,8 +146,9 @@ export class Game {
       acts.push({ type: "tow", uid: c.uid, mode: "plus", plusType: "fuel" });
       if (this.opts.modules >= 2) acts.push({ type: "tow", uid: c.uid, mode: "plus", plusType: "bat" });
     }
-    // Reparieren (2 Batterien -> Maschine aus Garage auf die Hand)
-    if (this.opts.modules >= 2 && p.bat >= 2 && p.garage.some(c => c.kraft))
+    // Reparieren (2 Batterien -> Maschine aus Garage auf die Hand). Nur wenn die Hand noch Platz hat:
+    // die Hand fasst maximal 3 Karten, sonst haette man kurzzeitig 4.
+    if (this.opts.modules >= 2 && p.bat >= 2 && p.hand.length < 3 && p.garage.some(c => c.kraft))
       acts.push({ type: "repair" });
     acts.push({ type: "pass", label: "Sparen (nichts bauen)" });
     return acts;
@@ -311,7 +312,7 @@ export class Game {
     const card = pl.slot;
     pl.slot = null; pl.slotTurbo = false;
     const pw = this.opts.worldPowers && card ? this.powers[card.world] : null;
-    if (pw && pw.toHand) pl.hand.push(card); else pl.garage.push(card);
+    if (pw && pw.toHand && pl.hand.length < 3) pl.hand.push(card); else pl.garage.push(card);   // Hand max 3
     if (this.opts.worldPowers && card) this._power(pl, card.world, "lose", ev);
   }
 
