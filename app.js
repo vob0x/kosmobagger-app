@@ -499,10 +499,31 @@ function playIntro() { if (!introVid || !introVid.play) return; const p = introV
 function backToMenu() {
   $("#table").classList.add("hidden"); $("#menu").classList.remove("hidden");
   if (document.body && document.body.classList) document.body.classList.remove("playing");
+  // Defensive Aufraeumung: keine FX-/Coach-Reste ueber dem Menue stehen lassen.
+  document.querySelectorAll(".confetti,.coach,.coachring,.coachhand").forEach(n => n.remove());
+  if (typeof Coach !== "undefined" && Coach.clear) Coach.clear();
   applyProgression();   // Freischaltungen im Menue aktualisieren
   playIntro();
 }
-$("#menuBtn").addEventListener("click", () => { backToMenu(); hideOverlay(); });
+// Mitten im Spiel nicht versehentlich alles verlieren -> kurze Rueckfrage.
+$("#menuBtn").addEventListener("click", () => {
+  const inGame = typeof game !== "undefined" && game && game.phase !== "gameover"
+    && document.body.classList.contains("playing");
+  if (!inGame) { backToMenu(); hideOverlay(); return; }
+  Snd.click();
+  showOverlay(`<h2>Spiel verlassen?</h2><p>Die laufende Partie geht verloren.</p>
+    <div class="incpick" style="gap:14px;margin-top:6px">
+      <button class="big ghostbtn" id="mbStay">Weiterspielen</button>
+      <button class="big" id="mbLeave">Zum Menü</button>
+    </div>`);
+  $("#mbStay").onclick = () => {
+    Snd.click(); hideOverlay();
+    if (typeof TUT !== "undefined" && TUT.active) return;   // Coach-Overlay liegt schon darunter
+    const h = game.players.find(p => !p.isAI && (game.needsIncome(p.idx) || game.needsCommit(p.idx)));
+    if (h) startHumanTurn(h);
+  };
+  $("#mbLeave").onclick = () => { Snd.click(); backToMenu(); hideOverlay(); };
+});
 
 // Repraesentative Maschine + Anzeigename je Welt (fuer die Welten-Wahl).
 const WORLD_META = {
@@ -723,6 +744,22 @@ function slotShow(el, card, turbo) {
 let selUid = null;
 let lastHandSet = new Set();
 let lastHandOwner = -1;
+// Ergebnis der zuletzt aufgelösten Runde -> wird oben im nächsten Einkommens-Overlay
+// nochmal gezeigt, damit es nie sofort vom Modal überdeckt wird.
+let lastResult = "";
+function summarizeResult(ev) {
+  const score = ev.find(e => e.t === "score");
+  const clash = ev.find(e => e.t === "clash");
+  const towed = ev.find(e => e.t === "towed");
+  if (score) { const nm = game.players[score.i].name; return `${nm} ${nm === "Du" ? "kommst" : "kommt"} durch — +1 ⬦`; }
+  if (clash) {
+    if (clash.winner === -1) return `Gleichstand ${clash.ea} : ${clash.eb} — beide in die Garage`;
+    const nm = game.players[clash.winner].name;
+    return `${nm} ${nm === "Du" ? "gewinnst" : "gewinnt"} den Kampf ${clash.ea} : ${clash.eb}`;
+  }
+  if (towed) return "🚛 Maschine abgeschleppt";
+  return "";
+}
 
 // Tippen -> Aktionsmenue; Ziehen auf den eigenen Bauplatz -> direkt bauen/ausspielen.
 function attachPlay(el, card) {
@@ -786,9 +823,20 @@ function renderHand() {
       attachPlay(el, card);
     } else if (canAct) {
       el.classList.add("dis");
+      // Nicht spielbar? Beim Tippen den Grund zeigen, statt tot zu wirken (vergebend + lehrt die Ökonomie).
+      el.addEventListener("click", () => {
+        Snd.click();
+        let why;
+        if (me.slot) why = "Dein Bauplatz ist besetzt — die Maschine kämpft weiter.";
+        else if (card.kraft && card.cost > me.fuel) why = `Noch ${card.cost - me.fuel} ⛽ sammeln — dann kannst du sie bauen.`;
+        else why = "Diese Karte geht gerade nicht.";
+        flash(why);
+      });
     }
     wrap.appendChild(el); row.appendChild(wrap);
   });
+  // Leerer Bauplatz markieren, solange der Spieler bauen darf.
+  const ms = $("#meSlot"); if (ms) ms.classList.toggle("buildable", affordableBuild);
   lastHandSet = curSet; lastHandOwner = persp;
 }
 
@@ -835,10 +883,15 @@ function showActions(card) {
     // Kosten stehen bereits auf der Karte (Kanister-Pips) -> Button zeigt nur die Maschine.
     iconBtn({ cls: "pbuild", title: `Bauen (kostet ${card.cost} Kanister)`, icon: ICON.build,
       fn: () => doCommit({ type: "build", uid: card.uid, turbo: false }) });
-    if (game.opts.modules >= 2 && me.bat > 0)
-      iconBtn({ cls: "pturbo", title: "Bauen mit Turbo — Batterie einsetzen, +2 stärker", icon: ICON.turbo,
+    if (game.opts.modules >= 2 && me.bat > 0) {
+      const tb = iconBtn({ cls: "pturbo", title: `Bauen mit Turbo — Batterie einsetzen, Kraft ${card.kraft} → ${card.kraft + 2}`, icon: ICON.turbo,
         cost: costPips("assets/batterie.png", 1),
         fn: () => doCommit({ type: "build", uid: card.uid, turbo: true }) });
+      // Resultwert sichtbar: eine Zahl sagt dem Kind sofort, was Turbo bringt.
+      const chip = document.createElement("span"); chip.className = "presult";
+      chip.innerHTML = `${card.kraft}<span class="arr">→</span>${card.kraft + 2}`;
+      tb.appendChild(chip);
+    }
   } else if (card.kind === "booster") {
     const img = card.gives === "bat" ? "assets/batterie.png" : "assets/kanister.png";
     iconBtn({ cls: card.gives === "bat" ? "pgainb" : "pgain", title: `Ausspielen: +1 ${card.gives === "bat" ? "Batterie" : "Kanister"}`,
@@ -934,10 +987,12 @@ function promptIncome(human) {
       ${m2 ? `<span title="Batterie">${gauge("assets/batterie.png", human.bat, BAT_MAX)}</span>` : ""}
       <span title="Kristalle">${gauge("assets/kristall.png", human.crystals, game.opts.target, true)}</span>
     </div>`;
-  showOverlay(`<h2>Einkommen</h2><p>Nimm eines pro Runde — dein Vorrat:</p>${stat}
+  const resBanner = (lastResult && game.round > 1) ? `<div class="incresult">${lastResult}</div>` : "";
+  lastResult = "";
+  showOverlay(`${resBanner}<h2>Einkommen</h2><p>Nimm eines pro Runde — dein Vorrat:</p>${stat}
     <div class="incpick incpick-lbl">
       <div class="incopt"><button class="pbtn pincome pfuel" id="inFuel" title="Treibstoff nehmen" aria-label="Treibstoff nehmen"><img class="pbig xl" src="assets/kanister.png" alt=""></button><div class="pcap"><b>Treibstoff</b><span>Maschinen bauen</span></div></div>
-      ${m2 ? `<div class="incopt"><button class="pbtn pincome pbat" id="inBat" title="Batterie nehmen" aria-label="Batterie nehmen"><img class="pbig xl" src="assets/batterie.png" alt=""></button><div class="pcap"><b>Batterie</b><span>+2 Kraft im Kampf</span></div></div>` : ""}
+      ${m2 ? `<div class="incopt"><button class="pbtn pincome pbat" id="inBat" title="Batterie nehmen" aria-label="Batterie nehmen"><img class="pbig xl" src="assets/batterie.png" alt=""></button><div class="pcap"><b>Batterie</b><span>+2 Kraft beim Bauen</span></div></div>` : ""}
     </div>`);
   const pick = async k => {
     game.setIncome(human.idx, k); hideOverlay();
@@ -969,7 +1024,7 @@ function promptCommit(human) {
   // Strategie-Nudge in den ersten Runden (Playtester wünschte sich Beispiele/Strategien)
   if (game.round <= 2) {
     const tip = document.createElement("div"); tip.className = "acthint acttip";
-    tip.textContent = "💡 Grössere Zahl gewinnt den Kampf. Spare Treibstoff für starke Maschinen (5–6), Batterien geben +2 für knappe Duelle.";
+    tip.textContent = "💡 Grössere Zahl gewinnt den Kampf. Spare Treibstoff für starke Maschinen (5–6); eine Batterie gibt +2, wenn du mit Turbo baust.";
     $("#actionbar").appendChild(tip);
   }
   flash(`Runde ${game.round} · ${human.name}${human.name === "Du" ? " bist" : " ist"} dran`);
@@ -1007,7 +1062,9 @@ function fillCrystalNow(i) {
 
 // ---------- Aufdecken & Kampf ----------
 async function revealAndResolve() {
-  acting = false; persp = 0; renderBoard();
+  acting = false; persp = 0;
+  const _ms = $("#meSlot"); if (_ms) _ms.classList.remove("buildable");
+  renderBoard();
   await sleep(500);   // kurzer Atemzug, bevor der Countdown startet (Zielgruppe: langsamer)
   const A = game.players[0], B = game.players[1];
   const pre = [A.slot, B.slot];
@@ -1112,6 +1169,7 @@ async function revealAndResolve() {
     flash("Nichts passiert");
   }
   drainFx(ev);   // Modul 3: Brems-Effekte sichtbar machen (Gegner verliert Kanister/Batterie)
+  lastResult = summarizeResult(ev);   // fürs nächste Einkommens-Overlay merken
   const win = ev.find(e => e.t === "win");
   await sleep(win ? 1900 : 2600);   // Zahlen/Kristall stehen ~2,2 s -> Ergebnis nicht vorher wegnehmen
   if (TUT.active) { TUT.afterResolve(ev); return; }   // Tutorial fuehrt selbst weiter
@@ -1151,7 +1209,7 @@ function playFullscreenVideo(src, onDone, poster) {
   v.src = src; v.autoplay = true; v.muted = false; v.playsInline = true; v.preload = "auto";
   if (poster) v.poster = poster;                 // Startbild statt Schwarzbild vor dem Abspielen
   if (v.setAttribute) { v.setAttribute("playsinline", ""); v.setAttribute("webkit-playsinline", ""); }
-  const skip = document.createElement("button"); skip.className = "fsskip"; skip.textContent = "Weiter ▸";
+  const skip = document.createElement("button"); skip.className = "fsskip"; skip.textContent = "Überspringen ▸";
   const snd = document.createElement("div"); snd.className = "fssound"; snd.textContent = "🔊 Antippen für Ton";
   sp.appendChild(v); sp.appendChild(skip); sp.appendChild(snd);
   document.body.appendChild(sp);

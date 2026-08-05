@@ -73,10 +73,13 @@ html,body{overflow-x:hidden;max-width:100%}
 .pinfo{display:flex;align-items:center;gap:16px;font-size:15px}
 .pname{font-weight:700;min-width:120px}
 /* BEIDE Ressourcenzeilen identisch + kompakt -> passen immer auf schmale Handys.
-   Kein Pillen-Rahmen, kleine Pips, keine "X/5"-Zahl (Kind zaehlt die Symbole). */
+   Kein Pillen-Rahmen, kleine Pips. Der Kristall-Score ist die Siegbedingung ->
+   die Zahl wird GROSS gezeigt (eine "3" liest das Kind schneller als 3 Mini-Diamanten;
+   die Pips bleiben als optischer Fortschrittsbalken daneben). */
 .side .pinfo{gap:5px;flex-wrap:nowrap;min-width:0}
 .side .pname{min-width:0;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:88px}
-.side .crystals b{display:none}
+.side .crystals b{display:inline-block;margin-left:5px;font-size:17px;font-weight:800;
+  color:#c8f2ff;text-shadow:0 0 9px rgba(120,225,255,.6);line-height:1}
 .side .crystals{gap:2px}
 .side .res{background:none;border:0;padding:0;font-size:12px;gap:2px}
 .side .res b{font-size:12px}
@@ -120,7 +123,7 @@ html,body{overflow-x:hidden;max-width:100%}
 .hand .card{cursor:pointer}
 .hand .card:hover{transform:translateY(-14px) scale(1.04);box-shadow:0 16px 30px rgba(0,0,0,.6);z-index:5}
 .card.sel{outline-color:var(--gold);transform:translateY(-16px) scale(1.05)}
-.card.dis{filter:grayscale(.75) brightness(.42);cursor:not-allowed;opacity:.9}
+.card.dis{filter:grayscale(.75) brightness(.42);cursor:pointer;opacity:.9}
 .hand .card.dis:hover{transform:none;box-shadow:0 6px 16px rgba(0,0,0,.5)}
 .card.back{background-color:#101a37}
 .card .cost{position:absolute;top:5px;right:5px;display:flex;gap:2px}
@@ -186,6 +189,18 @@ canvas.confetti{position:fixed;inset:0;z-index:60;pointer-events:none}
 /* Drag-and-Drop */
 .card.dragghost{position:fixed;z-index:999;pointer-events:none;transform:translate(-50%,-50%) rotate(-4deg);opacity:.96;box-shadow:0 22px 44px rgba(0,0,0,.6)}
 .slot.drop{border-color:var(--gold);background:rgba(255,207,63,.12);box-shadow:inset 0 0 24px rgba(255,207,63,.45)}
+/* Leerer eigener Bauplatz, wenn der Spieler bauen darf: sanft pulsierender Rahmen
+   markiert "hier bauen" ohne Text (Zielgruppe liest kaum). */
+.slot.buildable{border-color:var(--gold);border-style:dashed;animation:buildpulse 1.5s ease-in-out infinite}
+@keyframes buildpulse{0%,100%{box-shadow:inset 0 0 20px rgba(255,207,63,.16)}50%{box-shadow:inset 0 0 32px rgba(255,207,63,.5)}}
+/* Turbo-Button: zeigt den Kraft-Zuwachs als Zahl (z. B. 5 -> 7), damit klar wird, was Turbo bringt. */
+.presult{display:inline-flex;align-items:center;gap:3px;margin-left:6px;font-weight:800;
+  font-size:15px;color:#c8f2ff;text-shadow:0 0 8px rgba(120,225,255,.5)}
+.presult .arr{opacity:.8;font-weight:600}
+/* Ergebnis der letzten Runde, oben im Einkommens-Overlay -> wird nie mehr sofort ueberdeckt. */
+.incresult{display:inline-block;margin:0 auto 10px;padding:7px 16px;border-radius:12px;
+  background:rgba(120,225,255,.12);border:1px solid rgba(120,225,255,.35);
+  color:#eaf6ff;font-weight:700;font-size:15px}
 
 .acthint{flex-basis:100%;order:-1;text-align:center;color:var(--dim);font-size:13px;margin:0 auto 2px;
   max-width:min(560px,92vw);line-height:1.15}
