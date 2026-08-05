@@ -1318,7 +1318,7 @@ const TUT = {
   showPanels(onDone) {
     const P = [
       { img: "assets/hero.png", t: "Zwei Maschinen treten gegeneinander an. 🤖🚚" },
-      { img: "assets/kanister.png", t: "Jede Runde bekommst du einen Kanister ⛽ — damit baust du Maschinen." },
+      { img: "assets/kanister.png", t: "Jede Runde nimmst du <b>eines</b>: einen Kanister ⛽ zum Bauen — oder eine Batterie 🔋 für Extra-Kraft." },
       { img: "assets/kristall.png", t: "Beim Aufdecken gewinnt die <b>größere Zahl</b>." },
       { img: "assets/kristall.png", t: "Die Siegermaschine <b>bleibt stehen</b> und kämpft weiter." },
       { img: "assets/kristall.png", t: "Steht sie allein da (der Gegner hat keine), kommt sie <b>durch</b> und holt einen Kristall ⬦." },
@@ -1361,17 +1361,42 @@ const TUT = {
     if (introVid && introVid.pause) introVid.pause();
     FX.start();
     ["oppDeck", "meDeck"].forEach(id => { if (!$("#" + id)) { const d = document.createElement("div"); d.id = id; d.className = "deckpile"; $("#battle").appendChild(d); } });
-    game = new Game({ modules: 1, target: 2, deckDoubled: true, boosters: 0, tows: 0, names: ["Du", "Computer"], ai: [false, true], aiLevel: 0 });
+    // Modul 2, damit die Batterie im Tutorial wirklich existiert (geführte Einkommens-Wahl).
+    game = new Game({ modules: 2, target: 2, deckDoubled: true, boosters: 0, tows: 0, names: ["Du", "Computer"], ai: [false, true], aiLevel: 0 });
     const me = game.players[0], op = game.players[1];
     const pull = (p, k) => { const idx = p.deck.findIndex(c => c.kraft === k); return idx >= 0 ? p.deck.splice(idx, 1)[0] : p.deck.pop(); };
     const strong = pull(me, 3), weak = pull(op, 1);   // Spieler stark (Kraft 3), Gegner schwach (Kraft 1)
     game.round = 1; game.phase = "act";
-    Object.assign(me, { income: "fuel", fuel: 2, bat: 0, crystals: 0, slot: null, slotTurbo: false, pending: null, hand: [strong], deck: [], garage: [] });
+    // fuel 4 reicht für die starke Maschine (Kosten 3) in BEIDEN Zweigen — auch wenn das Kind die Batterie nimmt.
+    Object.assign(me, { income: "fuel", fuel: 4, bat: 0, crystals: 0, slot: null, slotTurbo: false, pending: null, hand: [strong], deck: [], garage: [] });
     Object.assign(op, { income: "fuel", fuel: 1, bat: 0, crystals: 0, slot: null, slotTurbo: false, hand: [weak], deck: [], garage: [] });
     op.pending = { type: "build", uid: weak.uid, turbo: false };   // Gegner baut Runde 1 eine kleine Maschine
     game.aiChoose = (p) => { const c = p.hand.find(x => x.kraft && x.cost <= p.fuel); return (game.round <= 1 && c) ? { type: "build", uid: c.uid, turbo: false } : { type: "pass" }; };
-    this.active = true; persp = 0; renderBoard();
-    Coach.say("Willkommen! 👋 Wir spielen zusammen — und du gewinnst. Tipp los!", () => this.round());
+    this.active = true; this.turboBranch = false; persp = 0; renderBoard();
+    Coach.say("Willkommen! 👋 Wir spielen zusammen — und du gewinnst. Zuerst: Was nimmst du?", () => this.income());
+  },
+  // Geführte Einkommens-Wahl: das Kind wählt Treibstoff ODER Batterie; beide Zweige führen zum Sieg.
+  income() {
+    persp = 0; renderBoard();
+    const me = game.players[0];
+    showOverlay(`<div class="tutincome"><h2>Nimm eine Sache</h2>
+      <p>Jede Runde nimmst du <b>eines</b>: Treibstoff zum Bauen — oder eine Batterie für Extra-Kraft. Wähl selbst!</p>
+      <div class="incpick incpick-lbl">
+        <div class="incopt"><button class="pbtn pincome pfuel" id="tinFuel" title="Treibstoff nehmen" aria-label="Treibstoff nehmen"><img class="pbig xl" src="assets/kanister.png" alt=""></button><div class="pcap"><b>Treibstoff</b><span>Maschinen bauen</span></div></div>
+        <div class="incopt"><button class="pbtn pincome pbat" id="tinBat" title="Batterie nehmen" aria-label="Batterie nehmen"><img class="pbig xl" src="assets/batterie.png" alt=""></button><div class="pcap"><b>Batterie</b><span>+2 Kraft beim Bauen</span></div></div>
+      </div></div>`);
+    const pick = (k) => {
+      Snd.click(); hideOverlay();
+      if (k === "bat") { me.income = "bat"; me.bat = 1; this.turboBranch = true; }
+      else { me.income = "fuel"; me.fuel += 1; this.turboBranch = false; }
+      renderBoard();
+      const msg = k === "bat"
+        ? "Eine Batterie! 🔋 Damit baust du gleich mit <b>Turbo</b> — deine Maschine wird noch stärker."
+        : "Treibstoff ⛽ — damit baust du gleich deine Maschine.";
+      Coach.say(msg, () => this.round());
+    };
+    $("#tinFuel").onclick = () => pick("fuel");
+    $("#tinBat").onclick = () => pick("bat");
   },
   round() {
     persp = 0; renderBoard();
@@ -1380,7 +1405,11 @@ const TUT = {
       Coach.point("#meSlot", "Deine Maschine kämpft weiter und holt einen Kristall. Tipp zum Aufdecken!", () => { me.pending = { type: "none" }; TUT.go(); });
     } else {
       const card = me.hand.find(c => c.kraft && c.cost <= me.fuel) || me.hand[0];
-      Coach.point("#meArea .mehand .card", "Tipp deine Maschine — sie ist stärker als die des Gegners!", () => { me.pending = { type: "build", uid: card.uid, turbo: false }; TUT.go(); });
+      const turbo = !!this.turboBranch && me.bat > 0;   // nur wenn das Kind die Batterie genommen hat
+      const txt = turbo
+        ? "Tipp deine Maschine — mit der Batterie baust du sie mit Turbo!"
+        : "Tipp deine Maschine — sie ist stärker als die des Gegners!";
+      Coach.point("#meArea .mehand .card", txt, () => { me.pending = { type: "build", uid: card.uid, turbo }; this.turboBranch = false; TUT.go(); });
     }
   },
   go() { Coach.clear(); revealAndResolve(); },   // Ende wird in revealAndResolve via afterResolve abgefangen
