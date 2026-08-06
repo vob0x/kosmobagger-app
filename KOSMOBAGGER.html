@@ -1957,6 +1957,11 @@ const ACHS = [
   { id: "boss",     emoji: "👾", name: "Boss besiegt",     desc: "Gewinne gegen den starken Computer." },
   { id: "worlds",   emoji: "🌍", name: "Weltenherrscher",  desc: "Gewinne ein Spiel mit Weltkräften (Modul 3)." },
   { id: "veteran",  emoji: "🎖️", name: "Stammspieler",     desc: "Spiele 10 Partien." },
+  { id: "streak10", emoji: "🌟", name: "Zehn in Folge",    desc: "Gewinne 10 Spiele hintereinander." },
+  { id: "master",   emoji: "👑", name: "Grossmeister",     desc: "Gewinne insgesamt 25 Spiele." },
+  { id: "marathon", emoji: "⏱️", name: "Ausdauer",         desc: "Gewinne ein besonders langes Spiel." },
+  { id: "bossflaw", emoji: "🥇", name: "Makellos gg. Boss", desc: "Schlage den starken Computer ohne Gegenkristall." },
+  { id: "worlds5",  emoji: "🪐", name: "Welten-Kenner",    desc: "Gewinne 5 Spiele mit Weltkräften (Modul 3)." },
 ];
 const Ach = (() => {
   const KEY = "kb_ach";
@@ -1985,6 +1990,11 @@ const Ach = (() => {
         if (round <= target + 3) earn("fast");
         if (level >= 0.9) earn("boss");
         if (modules >= 3) earn("worlds");
+        if (s.streak >= 10) earn("streak10");
+        if (s.wins >= 25) earn("master");
+        if (round >= 18) earn("marathon");
+        if (level >= 0.9 && oppC === 0) earn("bossflaw");
+        if (modules >= 3) { s.worldWins = (s.worldWins || 0) + 1; if (s.worldWins >= 5) earn("worlds5"); }
       }
       if (s.games >= 10) earn("veteran");
       save(s);
@@ -2003,6 +2013,11 @@ const ACH_ART = {
   boss:     { core: ["#d8a6ff", "#7b3fd6"], glyph: '<path d="M30 42l7 8 6-16 7 14 7-14 6 16 7-8-4 22H34z" fill="#fff"/><rect x="34" y="62" width="32" height="7" rx="2" fill="#fff"/>' },
   worlds:   { core: ["#a9b6ff", "#4b52c8"], glyph: '<circle cx="50" cy="47" r="15" fill="#fff"/><ellipse cx="50" cy="47" rx="24" ry="8" fill="none" stroke="#fff" stroke-width="3.5" transform="rotate(-20 50 47)"/><path d="M40 44c4 3 16 3 20 0M42 52c4-2 12-2 16 0" stroke="#4b52c8" stroke-width="2.5" fill="none"/>' },
   veteran:  { core: ["#ffd9a0", "#c8822e"], glyph: '<path d="M50 26l6 15 16 1-12 10 4 16-14-9-14 9 4-16-12-10 16-1z" fill="#fff"/>' },
+  streak10: { core: ["#ffcf6a", "#e8471a"], glyph: '<path d="M50 22l7 18 18 7-18 7-7 18-7-18-18-7 18-7z" fill="#fff"/><circle cx="50" cy="47" r="5" fill="#e8471a"/>' },
+  master:   { core: ["#ffe680", "#dca000"], glyph: '<path d="M26 60l-4-24 15 11 13-17 13 17 15-11-4 24z" fill="#fff"/><rect x="26" y="62" width="48" height="7" rx="2" fill="#fff"/>' },
+  marathon: { core: ["#a6e88a", "#2f9e46"], glyph: '<circle cx="50" cy="52" r="19" fill="none" stroke="#fff" stroke-width="5"/><path d="M50 52V38" stroke="#fff" stroke-width="5" stroke-linecap="round"/><path d="M50 52l10 6" stroke="#fff" stroke-width="4" stroke-linecap="round"/><rect x="43" y="22" width="14" height="7" rx="3" fill="#fff"/>' },
+  bossflaw: { core: ["#d8a6ff", "#6a2fc0"], glyph: '<path d="M50 26l18 7v14c0 15-18 24-18 24s-18-9-18-24V33z" fill="#fff"/><path d="M50 40l3 7 8 1-6 5 2 8-7-4-7 4 2-8-6-5 8-1z" fill="#6a2fc0"/>' },
+  worlds5:  { core: ["#a9b6ff", "#3f46c0"], glyph: '<circle cx="50" cy="49" r="14" fill="#fff"/><ellipse cx="50" cy="49" rx="26" ry="9" fill="none" stroke="#fff" stroke-width="3.5" transform="rotate(-18 50 49)"/><circle cx="73" cy="35" r="3.5" fill="#fff"/>' },
 };
 function achSVG(id, on) {
   const a = ACH_ART[id] || { core: ["#ccc", "#999"], glyph: "" };
@@ -2324,7 +2339,8 @@ function renderBoard() {
   // Info
   const meA = $("#meArea"), opA = $("#oppArea");
   meA.querySelector(".pname").innerHTML = me.name + worldBadges(me);
-  opA.querySelector(".pname").innerHTML = op.name + worldBadges(op);
+  // Die Welten des Gegners bleiben GEHEIM — sonst weiss man seine Kräfte im Voraus.
+  opA.querySelector(".pname").innerHTML = op.name;
   for (const [area, p, isMe] of [[meA, me, true], [opA, op, false]]) {
     const f = isMe ? dispFuel(p) : p.fuel, b = isMe ? dispBat(p) : p.bat;
     area.querySelector(".tank").innerHTML = gauge("assets/kanister.png", f, TANK_MAX);
@@ -2784,10 +2800,13 @@ async function revealAndResolve() {
   if (towed) { flash("🚛 abgeschleppt!"); Snd.place(); FX.burst(centerOf("#oppSlot").x, centerOf("#oppSlot").y, "176,182,190", 20); }
   if (clash) {
     Snd.clash(); shake(clash.winner === -1 ? 1.3 : 1); flashScreen();
-    FX.ring(mid.x, mid.y, "255,207,63"); FX.burst(mid.x, mid.y, "255,180,60", 30, { spread: 11 });
-    if (fight) {   // beide Welten schlagen im Aufprall zusammen
-      FX.burst(mid.x, mid.y, wRgb(d0.card), 16, { spread: 10, g: 0.3 });
-      FX.burst(mid.x, mid.y, wRgb(d1.card), 16, { spread: 10, g: 0.3 });
+    FX.ring(mid.x, mid.y, "255,207,63");   // kurzer Aufprall-Blitz (Ring), KEIN Gold-Konfetti mehr
+    if (fight) {
+      // Beide Welten prallen zusammen — jede mit IHREM eigenen Effekt (Schutt/Sterne/Qualm/Blitze),
+      // damit man die Welten sieht statt generischer Funken.
+      worldFx(d0.card, mid, true); worldFx(d1.card, mid, true);
+    } else {
+      FX.burst(mid.x, mid.y, "255,180,60", 20, { spread: 11 });   // Fallback ohne Weltkampf
     }
     const meP = centerOf("#meSlot"), opP = centerOf("#oppSlot");
     if (clash.winner === -1) {
