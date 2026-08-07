@@ -295,6 +295,14 @@ const ACHS = [
   { id: "marathon", emoji: "⏱️", name: "Ausdauer",         desc: "Gewinne ein besonders langes Spiel." },
   { id: "bossflaw", emoji: "🥇", name: "Makellos gg. Boss", desc: "Schlage den starken Computer ohne Gegenkristall." },
   { id: "worlds5",  emoji: "🪐", name: "Welten-Kenner",    desc: "Gewinne 5 Spiele mit Weltkräften (Modul 3)." },
+  { id: "worldsflaw", emoji: "🌟", name: "Weltmeister",     desc: "Gewinne mit Weltkräften, ohne dass der Gegner einen Kristall holt." },
+  { id: "underdog", emoji: "🐺", name: "Underdog",          desc: "Schlage den starken Computer nach einem Rückstand." },
+  // --- Exklusiv (besonders selten, edlerer Rahmen) ---
+  { id: "speedrun", emoji: "🏁", name: "Perfekter Lauf",    desc: "Gewinne fast ohne Zeitverlust — kaum mehr Runden als Kristalle.", elite: true },
+  { id: "legend",   emoji: "💎", name: "Legende",           desc: "Gewinne insgesamt 50 Spiele.", elite: true },
+  { id: "streak20", emoji: "🌠", name: "Zwanzig in Folge",  desc: "Gewinne 20 Spiele hintereinander.", elite: true },
+  { id: "centurion", emoji: "🏛️", name: "Hundert Duelle",   desc: "Spiele 100 Partien.", elite: true },
+  { id: "perfect",  emoji: "✨", name: "Makelloser Blitz",  desc: "Gewinne blitzschnell UND ohne einen Gegenkristall.", elite: true },
 ];
 const Ach = (() => {
   const KEY = "kb_ach";
@@ -328,8 +336,15 @@ const Ach = (() => {
         if (round >= 18) earn("marathon");
         if (level >= 0.9 && oppC === 0) earn("bossflaw");
         if (modules >= 3) { s.worldWins = (s.worldWins || 0) + 1; if (s.worldWins >= 5) earn("worlds5"); }
+        if (modules >= 3 && oppC === 0) earn("worldsflaw");
+        if (level >= 0.9 && oppC >= target - 1) earn("underdog");
+        if (round <= target + 1) earn("speedrun");
+        if (oppC === 0 && round <= target + 1) earn("perfect");
+        if (s.wins >= 50) earn("legend");
+        if (s.streak >= 20) earn("streak20");
       }
       if (s.games >= 10) earn("veteran");
+      if (s.games >= 100) earn("centurion");
       save(s);
       return fresh.map(id => ACHS.find(a => a.id === id)).filter(Boolean);
     },
@@ -351,19 +366,31 @@ const ACH_ART = {
   marathon: { core: ["#a6e88a", "#2f9e46"], glyph: '<circle cx="50" cy="52" r="19" fill="none" stroke="#fff" stroke-width="5"/><path d="M50 52V38" stroke="#fff" stroke-width="5" stroke-linecap="round"/><path d="M50 52l10 6" stroke="#fff" stroke-width="4" stroke-linecap="round"/><rect x="43" y="22" width="14" height="7" rx="3" fill="#fff"/>' },
   bossflaw: { core: ["#d8a6ff", "#6a2fc0"], glyph: '<path d="M50 26l18 7v14c0 15-18 24-18 24s-18-9-18-24V33z" fill="#fff"/><path d="M50 40l3 7 8 1-6 5 2 8-7-4-7 4 2-8-6-5 8-1z" fill="#6a2fc0"/>' },
   worlds5:  { core: ["#a9b6ff", "#3f46c0"], glyph: '<circle cx="50" cy="49" r="14" fill="#fff"/><ellipse cx="50" cy="49" rx="26" ry="9" fill="none" stroke="#fff" stroke-width="3.5" transform="rotate(-18 50 49)"/><circle cx="73" cy="35" r="3.5" fill="#fff"/>' },
+  worldsflaw: { core: ["#9fd8ff", "#2f6ad6"], glyph: '<path d="M50 24l7 15 16 2-12 11 3 16-14-8-14 8 3-16-12-11 16-2z" fill="#fff"/><circle cx="50" cy="46" r="6" fill="#2f6ad6"/>' },
+  underdog: { core: ["#c9d2e6", "#5a6478"], glyph: '<circle cx="50" cy="57" r="11" fill="#fff"/><circle cx="37" cy="45" r="5" fill="#fff"/><circle cx="50" cy="40" r="5" fill="#fff"/><circle cx="63" cy="45" r="5" fill="#fff"/>' },
+  speedrun: { core: ["#bfe0ff", "#2f6ad6"], glyph: '<path d="M34 26v46" stroke="#fff" stroke-width="4" stroke-linecap="round"/><path d="M39 30h30v22H39z" fill="#fff"/><g fill="#2f6ad6"><rect x="39" y="30" width="7.5" height="5.5"/><rect x="54" y="30" width="7.5" height="5.5"/><rect x="46.5" y="35.5" width="7.5" height="5.5"/><rect x="61.5" y="35.5" width="7.5" height="5.5"/><rect x="39" y="41" width="7.5" height="5.5"/><rect x="54" y="41" width="7.5" height="5.5"/><rect x="46.5" y="46.5" width="7.5" height="5.5"/><rect x="61.5" y="46.5" width="7.5" height="5.5"/></g>' },
+  legend:   { core: ["#eafcff", "#8a5cff"], glyph: '<path d="M32 41h36l-18 30z" fill="#fff"/><path d="M32 41l8-13h20l8 13" fill="none" stroke="#fff" stroke-width="4" stroke-linejoin="round"/><path d="M40 28L50 71 60 28M32 41h36" stroke="#c9b8ff" stroke-width="1.8" fill="none"/>' },
+  streak20: { core: ["#eafcff", "#7a5cff"], glyph: '<path d="M50 22l6 16 16 6-16 6-6 16-6-16-16-6 16-6z" fill="#fff"/><path d="M74 25l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" fill="#fff"/><path d="M24 60l1.6 4 4 1.6-4 1.6-1.6 4-1.6-4-4-1.6 4-1.6z" fill="#fff"/>' },
+  centurion: { core: ["#eafcff", "#6a7cff"], glyph: '<path d="M24 40l26-15 26 15z" fill="#fff"/><rect x="30" y="42" width="6" height="24" fill="#fff"/><rect x="47" y="42" width="6" height="24" fill="#fff"/><rect x="64" y="42" width="6" height="24" fill="#fff"/><rect x="25" y="68" width="50" height="6" rx="1.5" fill="#fff"/>' },
+  perfect:  { core: ["#eafcff", "#3aa0ff"], glyph: '<path d="M50 20l4 22 22 4-22 4-4 22-4-22-22-4 22-4z" fill="#fff"/><path d="M50 35l2.5 12.5L65 50l-12.5 2.5L50 65l-2.5-12.5L35 50l12.5-2.5z" fill="#3aa0ff"/>' },
 };
 function achSVG(id, on) {
   const a = ACH_ART[id] || { core: ["#ccc", "#999"], glyph: "" };
+  const meta = ACHS.find(x => x.id === id);
+  const elite = on && !!(meta && meta.elite);   // exklusive Erfolge -> Diamant-Rahmen + extra Funkeln
   const uid = id + (on ? "1" : "0");
-  const ring = on ? ["#fff4c4", "#e7a11a"] : ["#9aa3b8", "#5c6478"];
+  const ring = on ? (elite ? ["#eafcff", "#8a5cff"] : ["#fff4c4", "#e7a11a"]) : ["#9aa3b8", "#5c6478"];
   const core = on ? a.core : ["#7c8398", "#565d70"];
   const inner = on ? a.glyph
     : '<rect x="37" y="47" width="26" height="19" rx="4" fill="#cdd5e8"/><path d="M42 47v-6a8 8 0 0 1 16 0v6" fill="none" stroke="#cdd5e8" stroke-width="4.5"/><circle cx="50" cy="55" r="3" fill="#4a5570"/><rect x="48.5" y="55" width="3" height="6" rx="1.5" fill="#4a5570"/>';
-  const sparks = on ? '<g fill="#fff"><path d="M80 22l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/><path d="M22 64l1.5 4 4 1.5-4 1.5-1.5 4-1.5-4-4-1.5 4-1.5z"/></g>' : '';
+  const sparks = on ? (elite
+    ? '<g fill="#fff"><path d="M80 22l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/><path d="M22 64l1.5 4 4 1.5-4 1.5-1.5 4-1.5-4-4-1.5 4-1.5z"/><path d="M78 66l1.5 4 4 1.5-4 1.5-1.5 4-1.5-4-4-1.5 4-1.5z"/><path d="M21 30l1.3 3.4 3.4 1.3-3.4 1.3-1.3 3.4-1.3-3.4-3.4-1.3 3.4-1.3z"/></g>'
+    : '<g fill="#fff"><path d="M80 22l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/><path d="M22 64l1.5 4 4 1.5-4 1.5-1.5 4-1.5-4-4-1.5 4-1.5z"/></g>') : '';
   return `<svg viewBox="0 0 100 100" class="achmedal${on ? " on" : ""}" aria-hidden="true">`
     + `<defs><radialGradient id="c${uid}" cx="38%" cy="30%" r="80%"><stop offset="0" stop-color="${core[0]}"/><stop offset="1" stop-color="${core[1]}"/></radialGradient>`
     + `<linearGradient id="r${uid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${ring[0]}"/><stop offset="1" stop-color="${ring[1]}"/></linearGradient></defs>`
     + `<circle cx="50" cy="50" r="47" fill="url(#r${uid})"/><circle cx="50" cy="50" r="47" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="1.5"/>`
+    + (elite ? `<circle cx="50" cy="50" r="45" fill="none" stroke="#eafcff" stroke-width="2" opacity=".85"/>` : "")
     + `<circle cx="50" cy="50" r="34" fill="url(#c${uid})"/><circle cx="50" cy="50" r="34" fill="none" stroke="rgba(0,0,0,.22)" stroke-width="1.5"/>`
     + inner
     + `<ellipse cx="42" cy="33" rx="19" ry="11" fill="rgba(255,255,255,.25)"/>`
