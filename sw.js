@@ -1,4 +1,4 @@
-// KOSMOBAGGER PWA Service-Worker.
+// KOSMOBAGGER PWA Service-Worker. redeploy
 // App-Shell NETWORK-FIRST (online aktuell), Medien CACHE-FIRST (offline). Version bei Release erhoehen.
 const CACHE = "kosmobagger-v71";
 const ASSETS = [
