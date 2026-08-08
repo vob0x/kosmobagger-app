@@ -1,5 +1,5 @@
 import { Game, TANK_MAX, BAT_MAX, WORLD_POWERS } from "./engine.js";
-import { CARD_BACK, WORLD_COLORS } from "./cards.js";
+import { CARD_BACK, WORLD_COLORS, MACHINES } from "./cards.js";
 
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
@@ -254,6 +254,7 @@ function worldFx(card, p, strong = false) {
 const cfg = { mode: "ai", modules: 1, target: 5, ai: 0.85 };
 let game = null;
 let persp = 0;          // aus wessen Sicht der Tisch gerade gezeigt wird
+let glossyIds = new Set();   // freigeschaltete Glanzkarten (Karten-IDs), aus den Erfolgen berechnet
 
 // ---------- Freischaltung (im Geraet gespeichert) ----------
 // Modul 1 und 2 sind von Anfang an frei. Modul 3 nach 5 Siegen in Modul 2 (nur Siege gegen den Computer zaehlen).
@@ -409,6 +410,44 @@ function showAchievements() {
     + `<button class="big" id="achClose">Zurück</button></div>`);
   const c = $("#achClose"); if (c) c.onclick = () => { Snd.click(); hideOverlay(); };
 }
+
+// ---------- Glanzkarten (Holo-Foil, an Erfolge gekoppelt) ----------
+// Jeder Erfolg schaltet die Glanzversion GENAU EINER Maschine frei (thematische Zuordnung).
+const GLOSSY_BY_ACH = {
+  first: "BAU-1", veteran: "BAU-2", comeback: "BAU-4", marathon: "BAU-5", legend: "BAU-6",
+  speedrun: "KOS-1", fast: "KOS-2", worldsflaw: "KOS-4", worlds5: "KOS-5", worlds: "KOS-6",
+  shutout: "TEC-1", master: "TEC-2", perfect: "TEC-4", bossflaw: "TEC-5", boss: "TEC-6",
+  underdog: "TRK-1", streak3: "TRK-2", streak5: "TRK-3", streak10: "TRK-4", centurion: "TRK-5", streak20: "TRK-6",
+};
+// Die 3 verbleibenden Karten kommen über Sammel-Meilensteine (Anzahl freigeschalteter Erfolge).
+const GLOSSY_MILESTONES = [{ n: 5, card: "BAU-3" }, { n: 10, card: "KOS-3" }, { n: 15, card: "TEC-3" }];
+function computeGlossy() {
+  const u = (Ach.state().unlocked) || {}, cnt = Object.keys(u).length, set = new Set();
+  for (const [ach, card] of Object.entries(GLOSSY_BY_ACH)) if (u[ach]) set.add(card);
+  for (const m of GLOSSY_MILESTONES) if (cnt >= m.n) set.add(m.card);
+  return set;
+}
+function refreshGlossy() { glossyIds = computeGlossy(); }
+function glossyUnlockLabel(cardId) {
+  for (const [ach, c] of Object.entries(GLOSSY_BY_ACH)) if (c === cardId) { const a = ACHS.find(x => x.id === ach); return a ? a.name : ""; }
+  const m = GLOSSY_MILESTONES.find(x => x.card === cardId); return m ? `${m.n} Erfolge` : "";
+}
+function showGlossy() {
+  refreshGlossy();
+  const have = MACHINES.filter(m => glossyIds.has(m.id)).length;
+  const cells = MACHINES.map(m => {
+    const on = glossyIds.has(m.id);
+    return `<div class="glcell${on ? " on" : ""}">`
+      + `<div class="glcard${on ? " glossy" : ""}" style="background-image:url('${m.img}')">${on ? '<div class="foil"></div><div class="foilsheen"></div>' : ""}</div>`
+      + (on ? `<b>${m.name}</b>` : `<span class="gllock">🔒 ${glossyUnlockLabel(m.id)}</span>`)
+      + `</div>`;
+  }).join("");
+  showOverlay(`<div class="glscreen"><h2>✨ Glanzkarten <small>${have}/${MACHINES.length}</small></h2>`
+    + `<p class="glhint">Sammle Erfolge — jeder lässt eine Karte glänzen.</p>`
+    + `<div class="glgrid">${cells}</div><button class="big" id="glClose">Zurück</button></div>`);
+  const c = $("#glClose"); if (c) c.onclick = () => { Snd.click(); hideOverlay(); };
+}
+
 function applyProgression() {
   const seg = document.querySelector('[data-opt="modules"]');
   if (!seg || !seg.querySelectorAll) return;
@@ -598,6 +637,7 @@ function launchGame(hot, modules, worldPowers, worlds) {
   FX.start();
   ["oppDeck", "meDeck"].forEach(id => { if (!$("#" + id)) { const d = document.createElement("div"); d.id = id; d.className = "deckpile"; $("#battle").appendChild(d); } });
   persp = 0;
+  refreshGlossy();   // freigeschaltete Glanzkarten sollen im Spiel schimmern
   advance();
 }
 
@@ -651,6 +691,13 @@ function cardEl(card, { back = false, small = false } = {}) {
   const d = document.createElement("div");
   d.className = "card" + (back ? " back" : "");
   d.style.backgroundImage = `url("${back ? CARD_BACK : card.img}")`;
+  // Freigeschaltete Glanzkarte -> Holo-Foil-Schicht drüberlegen (auch im Spiel).
+  if (!back && card && card.id && glossyIds.has(card.id)) {
+    d.classList.add("glossy");
+    const f = document.createElement("div"); f.className = "foil";
+    const s = document.createElement("div"); s.className = "foilsheen";
+    d.appendChild(f); d.appendChild(s);
+  }
   // Kosten-Quadrate entfernt: das Karten-Artwork zeigt die Kanister-Kosten bereits.
   return d;
 }
@@ -1298,6 +1345,7 @@ function winScreen() {
     const foe = game.players.find(p => p.isAI) || game.players[1 - game.winner];
     freshAch = Ach.record({ won: humanWon, round: game.round, target: game.opts.target,
       oppC: foe ? foe.crystals : 0, level: cfg.ai, modules: cfg.modules });
+    refreshGlossy();   // neue Erfolge -> evtl. neue Glanzkarte freigeschaltet
   }
   const show = () => {
     FX.rain(); FX.burst(innerWidth / 2, innerHeight / 2, "255,207,63", 60, { spread: 14, g: 0.12 }); shake(1.4);
@@ -1486,5 +1534,7 @@ if ($("#learnBtn")) $("#learnBtn").addEventListener("click", () => { Snd.resume(
 if ($("#videoBtn")) $("#videoBtn").addEventListener("click", () => { Snd.resume(); Snd.click(); playFullscreenVideo("assets/erklaervideo.mp4", () => {}, "assets/erklaervideo_poster.jpg"); });
 // Erfolge-Sammlung anzeigen.
 if ($("#achBtn")) $("#achBtn").addEventListener("click", () => { Snd.resume(); Snd.click(); showAchievements(); });
+if ($("#glossyBtn")) $("#glossyBtn").addEventListener("click", () => { Snd.resume(); Snd.click(); showGlossy(); });
+refreshGlossy();   // beim Start einmal aus den gespeicherten Erfolgen berechnen
 // Beim allerersten Start das Tutorial anbieten (sobald das Menue sichtbar ist).
 if (!TUT.seen()) setTimeout(() => { if ($("#menu") && !$("#menu").classList.contains("hidden") && (!ov || ov.classList.contains("hidden"))) TUT.offer(); }, 2200);
